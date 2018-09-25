@@ -117,6 +117,5 @@ input_hex.grid(row=2,column=1)
 f_hex.grid(row=1,column=3)
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        db = load_db()
-        root.mainloop()
+    db = load_db()
+    root.mainloop()
