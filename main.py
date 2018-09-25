@@ -1,5 +1,6 @@
-import sys, itertools
+import sys, itertools, math
 from tkinter import *
+from tkinter import filedialog
 
 def load_db():
     dbfile = open("translation.ini").read()
@@ -59,6 +60,9 @@ def parse_char():
         else:
             _parsed += "\n"
 
+    while _parsed[-1:] == "\n":
+        _parsed = _parsed[:-1]
+
     input_char.delete("1.0",END)
     input_char.insert("1.0",_parsed)
 
@@ -67,11 +71,21 @@ def btn_tohex_clicked():
     _toconv = input_char.get("1.0",END)
     _convertedhex = ""
     ln = 1
+    _justification = s_centered.get()
     for line in _toconv.splitlines():
         _hexline = translate_string_to_hex(line[:26])
         if len(line) < 26:
-            for _ in itertools.repeat(None,26-len(line)):
-                _hexline += "FF "
+            if _justification != "centered": # left or right justification
+                for _ in itertools.repeat(None,26-len(line)):
+                    if _justification == "left":
+                        _hexline += "FF "
+                    elif _justification == "right":
+                        _hexline = "FF " + _hexline
+            else: # centered text
+                for _ in range(13-math.floor(len(line)/2)):
+                    _hexline = "FF " + _hexline
+                for _ in range(13-math.ceil(len(line)/2)):
+                    _hexline += "FF "
         ln += 1
         if ln == 2:
             _hexline += "FF FF "
@@ -83,6 +97,11 @@ def btn_tochar_clicked():
     _toconv = input_hex.get("1.0",END)
     input_char.delete("1.0",END)
     input_char.insert("1.0",translate_string_to_hex(_toconv))
+
+def getROM():
+    romfile = filedialog.askopenfilename(initialdir = "/",title = "Select ROM")
+    e_filepath.delete("1.0",END)
+    e_filepath.insert("1.0",romfile)
 
 root = Tk()
 root.title("Metroid: The HEX Gen")
@@ -115,6 +134,31 @@ input_hex = Text(f_hex, height=4, padx=12, pady=12, width=84, wrap=NONE)
 input_hex.grid(row=2,column=1)
 
 f_hex.grid(row=1,column=3)
+
+f_justify = Frame(root)
+
+s_centered = StringVar()
+s_centered.set("left")
+
+b = Radiobutton(f_justify, text="Left", variable=s_centered, value="left")
+b.grid(row=2, column=1)
+b = Radiobutton(f_justify, text="Centered", variable=s_centered, value="centered")
+b.grid(row=2, column=2)
+b = Radiobutton(f_justify, text="Right", variable=s_centered, value="right")
+b.grid(row=2, column=3)
+
+f_justify.grid(row=2,column=1)
+
+f_file = Frame(root)
+
+e_filepath = Text(f_file, pady=5, width=22, wrap=NONE, height=1)
+e_filepath.config(state='disabled')
+e_filepath.grid(row=0,column=1)
+
+b_getfile = Button(f_file, text="...", command=getROM)
+b_getfile.grid(row=0,column=0)
+
+f_file.grid(row=3,column=1)
 
 if __name__ == "__main__":
     db = load_db()
