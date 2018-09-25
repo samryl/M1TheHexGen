@@ -45,27 +45,36 @@ def translate_string_to_hex(_str):
     return _newstring
 
 def parse_char():
+
     _toparse = input_char.get("1.0",END)
     _parsed = ""
+
     ln = 1
     for line in _toparse.splitlines():
         if len(line) > 0:
-            _parsed += line[:26] + "\n"
+            _parsed += line[:26]
             ln += 1
         if ln > 4:
             break
+        else:
+            _parsed += "\n"
+
     input_char.delete("1.0",END)
-    input_char.insert("1.0",_parsed[:-1])
+    input_char.insert("1.0",_parsed)
 
 def btn_tohex_clicked():
     parse_char()
     _toconv = input_char.get("1.0",END)
     _convertedhex = ""
+    ln = 1
     for line in _toconv.splitlines():
         _hexline = translate_string_to_hex(line[:26])
         if len(line) < 26:
             for _ in itertools.repeat(None,26-len(line)):
                 _hexline += "FF "
+        ln += 1
+        if ln == 2:
+            _hexline += "FF FF "
         _convertedhex += _hexline + "\n"
     input_hex.delete("1.0",END)
     input_hex.insert("1.0",_convertedhex)
