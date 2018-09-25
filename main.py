@@ -100,9 +100,28 @@ def btn_tochar_clicked():
     input_char.insert("1.0",translate_string_to_hex(_toconv))
 
 def getROM():
+    global ROM
     romfile = filedialog.askopenfilename(initialdir = "/",title = "Select ROM")
+    e_filepath.config(state='normal')
     e_filepath.delete("1.0",END)
     e_filepath.insert("1.0",romfile)
+    e_filepath.config(state='disabled')
+    ROM = romfile
+
+def writeHexString(file, start_addr, string):
+    offset = int(start_addr, base=16)
+    file.seek(offset)
+    file.write(bytes(string))
+    return True
+
+def patchROM():
+    global ROM
+    f = open(ROM, "wb")
+    if f != False:
+        writeHexString(f, "0x00068D", b'\x00\x00\x00')
+    f.close()
+
+ROM = False
 
 root = Tk()
 root.title("Metroid: The HEX Gen")
@@ -160,6 +179,9 @@ b_getfile = Button(f_file, text="...", command=getROM)
 b_getfile.grid(row=0,column=0)
 
 f_file.grid(row=3,column=1)
+
+b_patch = Button(root, text="Patch", command=patchROM)
+b_patch.grid(row=3,column=3)
 
 if __name__ == "__main__":
     db = load_db()
