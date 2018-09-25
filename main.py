@@ -111,7 +111,7 @@ f_hex = Frame(root)
 
 l_hex = Label(f_hex, text="HEX")
 l_hex.grid(row=1,column=1)
-input_hex = Text(f_hex, height=4, padx=12, pady=12, width=28)
+input_hex = Text(f_hex, height=4, padx=12, pady=12, width=84, wrap=NONE)
 input_hex.grid(row=2,column=1)
 
 f_hex.grid(row=1,column=3)
