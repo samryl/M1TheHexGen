@@ -57,6 +57,8 @@ def get_line_length():
         return 18
     elif e == 'Intro: Header':
         return 15
+    elif e == 'Title: Press Play':
+        return 21
 
 def get_max_lines():
     e = s_editing.get()
@@ -67,6 +69,8 @@ def get_max_lines():
     elif e == 'Intro: Signature 2':
         return 1
     elif e == 'Intro: Header':
+        return 1
+    elif e == 'Title: Press Play':
         return 1
 
 def parse_char():
@@ -125,7 +129,7 @@ def btn_tohex_clicked():
         if ln > _max_lines+1:
             break
 
-        if s_editing.get() == 'Into: Body':
+        if s_editing.get() == 'Intro: Body ': #Remove last space to activate
             if ln == 2:
                 _hexline += "FF FF "
 
@@ -171,8 +175,10 @@ def patchROM():
             writeHexString(f, "0x00071B", t[0])
         elif e == 'Intro: Header':
             writeHexString(f, "0x00067B", t[0])
+        elif e == 'Title: Press Play':
+            writeHexString(f, "0x000513", t[0])
 
-    f.close()
+        f.close()
 
 ROM = False
 
