@@ -226,11 +226,11 @@ def patchROM():
             writeHexString(f, "0x0021D5", t[0])
         elif e == 'Ending: Body':
             writeHexString(f, "0x0021E0", t[0])
-            writeHexString(f, "0x0021FE", t[1])
-            writeHexString(f, "0x002122", t[2])
-            writeHexString(f, "0x00213D", t[3])
-            writeHexString(f, "0x002153", t[4])
-            writeHexString(f, "0x00216E", t[5])
+            #writeHexString(f, "0x0021FE", t[1])
+            #writeHexString(f, "0x002122", t[2])
+            #writeHexString(f, "0x00213D", t[3])
+            #writeHexString(f, "0x002153", t[4])
+            #writeHexString(f, "0x00216E", t[5])
 
         f.close()
 
