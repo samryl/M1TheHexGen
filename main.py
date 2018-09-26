@@ -1,5 +1,6 @@
 
 import sys, itertools, math
+from collections import OrderedDict
 from tkinter import *
 from tkinter import filedialog
 
@@ -46,24 +47,53 @@ def translate_string_to_hex(_str):
 
     return _newstring
 
+def get_line_length():
+    e = s_editing.get()
+    if e == 'Intro: Body':
+        return 26
+    elif e == 'Intro: Signature':
+        return 21
+    elif e == 'Intro: Signature 2':
+        return 18
+    elif e == 'Intro: Header':
+        return 15
+
+def get_max_lines():
+    e = s_editing.get()
+    if e == 'Intro: Body':
+        return 4
+    elif e == 'Intro: Signature':
+        return 1
+    elif e == 'Intro: Signature 2':
+        return 1
+    elif e == 'Intro: Header':
+        return 1
+
 def parse_char():
 
     _toparse = input_char.get("1.0",END)
     _parsed = ""
 
+    _line_len = get_line_length()
+    _max_lines = get_max_lines()
+
     ln = 1
     for line in _toparse.splitlines():
         if len(line) > 0:
-            _parsed += line[:26]
+            _parsed += line[:_line_len]
             ln += 1
-        if ln > 4:
+        if ln > _max_lines:
             break
         else:
             _parsed += "\n"
 
-    while _parsed[-1:] == "\n":
+    while len(_parsed.splitlines()) < _max_lines:
+        _parsed += "\n"
+
+    while len(_parsed.splitlines()) > _max_lines:
         _parsed = _parsed[:-1]
 
+    print(len(_parsed.splitlines()))
     input_char.delete("1.0",END)
     input_char.insert("1.0",_parsed)
 
@@ -71,25 +101,34 @@ def btn_tohex_clicked():
     parse_char()
     _toconv = input_char.get("1.0",END)
     _convertedhex = ""
+
+    _line_len = get_line_length()
+    _max_lines = get_max_lines()
+
     ln = 1
     _justification = s_centered.get()
     for line in _toconv.splitlines():
-        _hexline = translate_string_to_hex(line[:26])
-        if len(line) < 26:
+        _hexline = translate_string_to_hex(line[:_line_len])
+        if len(line) < _line_len:
             if _justification != "centered": # left or right justification
-                for _ in itertools.repeat(None,26-len(line)):
+                for _ in itertools.repeat(None,_line_len-len(line)):
                     if _justification == "left":
                         _hexline += "FF "
                     elif _justification == "right":
                         _hexline = "FF " + _hexline
             else: # centered text
-                for _ in range(13-math.floor(len(line)/2)):
+                for _ in range(math.floor(_line_len/2)-math.floor(len(line)/2)):
                     _hexline = "FF " + _hexline
-                for _ in range(13-math.ceil(len(line)/2)):
+                for _ in range(math.ceil(_line_len/2)-math.ceil(len(line)/2)):
                     _hexline += "FF "
         ln += 1
-        if ln == 2:
-            _hexline += "FF FF "
+        if ln > _max_lines+1:
+            break
+
+        if s_editing.get() == 'Into: Body':
+            if ln == 2:
+                _hexline += "FF FF "
+
         _convertedhex += _hexline + "\n"
     input_hex.delete("1.0",END)
     input_hex.insert("1.0",_convertedhex)
@@ -111,14 +150,28 @@ def getROM():
 def writeHexString(file, start_addr, string):
     offset = int(start_addr, base=16)
     file.seek(offset)
-    file.write(bytes(string))
+    file.write(bytearray.fromhex(string))
     return True
 
 def patchROM():
     global ROM
-    f = open(ROM, "wb")
-    if f != False:
-        writeHexString(f, "0x00068D", b'\x00\x00\x00')
+    if ROM != False:
+        f = open(ROM, "r+b")
+        t = input_hex.get("1.0",END).replace(" ","").splitlines()
+        e = s_editing.get()
+
+        if e == 'Intro: Body':
+            writeHexString(f, "0x00068D", t[0])
+            writeHexString(f, "0x0006AC", t[1])
+            writeHexString(f, "0x0006C9", t[2])
+            writeHexString(f, "0x0006E6", t[3])
+        elif e == 'Intro: Signature':
+            writeHexString(f, "0x000703", t[0])
+        elif e == 'Intro: Signature 2':
+            writeHexString(f, "0x00071B", t[0])
+        elif e == 'Intro: Header':
+            writeHexString(f, "0x00067B", t[0])
+
     f.close()
 
 ROM = False
@@ -130,8 +183,13 @@ root.configure(padx=12, pady=12)
 
 f_char = Frame(root)
 
-l_char = Label(f_char, text="TEXT")
+s_editing = StringVar(root)
+texts = {'Intro: Header', 'Intro: Body', 'Intro: Signature', 'Intro: Signature 2', 'Title: Press Play', 'Ending: Header', 'Ending: Body'}
+s_editing.set('Intro: Body')
+
+l_char = OptionMenu(f_char, s_editing, *sorted(texts))
 l_char.grid(row=1,column=1)
+
 input_char = Text(f_char, height=4, padx=12, pady=12, width=28)
 input_char.grid(row=2,column=1)
 
