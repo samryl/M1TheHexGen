@@ -1,9 +1,8 @@
 
-import sys, itertools, math
+import sys, itertools, math, re, os
 from collections import OrderedDict
 from tkinter import *
 from tkinter import filedialog
-import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -35,7 +34,8 @@ def translate_string_to_char(_str):
     i = 0
     while i < len(_str):
         if len(_str[i]) == 2:
-            _newstring += translate_letter_to_char(_str[i])
+            print(_newstring)
+            _newstring += translate_letter_to_char(_str[i].replace("\n",""))
         i += 1
 
     return _newstring
