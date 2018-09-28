@@ -1,2 +1,6 @@
 METROID.nes
 METROID.nes.bak
+build/
+__pycache__/
+main.spec
+icon.ico
