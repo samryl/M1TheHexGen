@@ -1,9 +1,8 @@
 
-import sys, itertools, math
+import sys, itertools, math, re, os
 from collections import OrderedDict
 from tkinter import *
 from tkinter import filedialog
-import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -35,7 +34,8 @@ def translate_string_to_char(_str):
     i = 0
     while i < len(_str):
         if len(_str[i]) == 2:
-            _newstring += translate_letter_to_char(_str[i])
+            print(_newstring)
+            _newstring += translate_letter_to_char(_str[i].replace("\n",""))
         i += 1
 
     return _newstring
@@ -88,21 +88,22 @@ def get_max_lines():
     elif e == 'Ending: Header':
         return 1
     elif e == 'Ending: Body':
-        return 6
+        return 8
 
 def get_ending_line_len(ln):
-    print(ln)
     if ln == 1:
-        return 19
+        return 26
     elif ln == 2:
-        return 21
+        return 23
     elif ln == 3:
-        return 18
+        return 6
     elif ln == 4:
-        return 11
+        return 24
     elif ln == 5:
-        return 18
+        return 17
     elif ln == 6:
+        return 24
+    elif ln == 7:
         return 6
     else:
         return 1
@@ -226,11 +227,12 @@ def patchROM():
             writeHexString(f, "0x0021D5", t[0])
         elif e == 'Ending: Body':
             writeHexString(f, "0x0021E0", t[0])
-            #writeHexString(f, "0x0021FE", t[1])
-            #writeHexString(f, "0x002122", t[2])
-            #writeHexString(f, "0x00213D", t[3])
-            #writeHexString(f, "0x002153", t[4])
-            #writeHexString(f, "0x00216E", t[5])
+            writeHexString(f, "0x0021FE", t[1])
+            writeHexString(f, "0x002218", t[2])
+            writeHexString(f, "0x002222", t[3])
+            writeHexString(f, "0x00223D", t[4])
+            writeHexString(f, "0x002253", t[5])
+            writeHexString(f, "0x00226E", t[6])
 
         f.close()
 
