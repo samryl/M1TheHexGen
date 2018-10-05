@@ -550,6 +550,16 @@ f_alignb.grid(row=3,column=1,sticky=NW)
 
 f_align.grid(row=2,column=1,sticky=NW, pady=4)
 
+f_position = Frame(f_tools)
+
+sp_verticaladjust = Spinbox(f_position, values=(1,2,3,4,5,6))
+sp_verticaladjust.grid(row=1,column=1)
+
+sp_horizontaladjust = Spinbox(f_position, values=(0))
+sp_horizontaladjust.grid(row=1,column=2)
+
+f_position.grid(row=3,column=1,pady=4)
+
 f_file = Frame(f_tools)
 
 b_getfile = Button(f_file, text="...", command=getROM)
@@ -566,7 +576,7 @@ b_patchall = Button(f_patchbuttons, text="Patch All", command=patchROMAll)
 b_patchall.grid(row=1,column=1, padx=4, pady=4)
 f_patchbuttons.grid(row=1,column=1)
 
-f_file.grid(row=3,column=1, pady=4)
+f_file.grid(row=4,column=1, pady=4)
 
 f_tools.grid(row=1,column=2,sticky=NW, padx=8)
 
