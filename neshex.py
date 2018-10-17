@@ -82,7 +82,7 @@ class neshex:
     def get_line_length(self, e):
         """
         Gets the line length of a particular line on the title screens.
-        NOTE: This function will become obsolete with version 1.0.
+        NOTE: This function will become obsolete with version 1.0, since it will read this data from the ROM.
         """
         e = s_editing.get()
         if e == 'Intro: Body':
@@ -105,7 +105,7 @@ class neshex:
     def get_max_lines(self, e):
         """
         Gets the number of lines in a particular section on the title screens.
-        NOTE: This function will become obsolete with version 1.0.
+        NOTE: This function will become obsolete with version 1.0, since it will read this data from the ROM.
         """
         e = s_editing.get()
         if e == 'Intro: Body':
@@ -128,7 +128,7 @@ class neshex:
     def get_ending_line_len(self, ln):
         """
         Gets the line length of a particular line on the ending screen.
-        NOTE: This function will become obsolete with version 1.0.
+        NOTE: This function will become obsolete with version 1.0, since it will read this data from the ROM.
         """
         if ln == 1:
             return 26
