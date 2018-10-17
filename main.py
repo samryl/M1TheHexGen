@@ -7,17 +7,9 @@ from tkinter import *
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 
+import neshex
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-def load_db():
-    dbfile = open("translation.ini").read()
-    lines = dbfile.splitlines()[1:] #excluding the first line
-    _db = {}
-    for line in lines:
-        key = line.split("=")
-        _db[key[0]] = key[1]
-
-    return _db
 
 def load_images():
     a = [f for f in listdir(dir_path + "/im/letters") if isfile(join(dir_path + "/im/letters", f))]
@@ -28,97 +20,6 @@ def load_images():
     i["bg2"] = PhotoImage(file=dir_path + "/im/2.png")
     i["bg3"] = PhotoImage(file=dir_path + "/im/3.png")
     return i
-
-def translate_letter_to_char(_let):
-    global db
-    global dbe
-    return list(db.keys())[list(db.values()).index(_let)]
-
-def translate_letter_to_hex(_let):
-    global db
-    global dbe
-    return db[_let]
-
-def translate_string_to_char(_str):
-
-    _newstring = ""
-    _str = _str.split(" ")
-
-    i = 0
-    while i < len(_str):
-        if len(_str[i]) == 2:
-            print(_newstring)
-            _newstring += translate_letter_to_char(_str[i].replace("\n",""))
-        i += 1
-
-    return _newstring
-
-def translate_string_to_hex(_str):
-
-    _newstring = ""
-
-    i = 0
-    while i < len(_str):
-        _newstring += translate_letter_to_hex(_str[i]) + " "
-        i += 1
-
-    return _newstring
-
-def get_line_length():
-    e = s_editing.get()
-    if e == 'Intro: Body':
-        return 26
-    elif e == 'Intro: Signature':
-        return 21
-    elif e == 'Intro: Signature 2':
-        return 18
-    elif e == 'Intro: Header':
-        return 15
-    elif e == 'Title: Press Play':
-        return 21
-    elif e == 'Title: Copyright':
-        return 18
-    elif e == 'Ending: Header':
-        return 8
-    elif e == 'Ending: Body':
-        return 21
-
-def get_max_lines():
-    e = s_editing.get()
-    if e == 'Intro: Body':
-        return 4
-    elif e == 'Intro: Signature':
-        return 1
-    elif e == 'Intro: Signature 2':
-        return 1
-    elif e == 'Intro: Header':
-        return 1
-    elif e == 'Title: Press Play':
-        return 1
-    elif e == 'Title: Copyright':
-        return 1
-    elif e == 'Ending: Header':
-        return 1
-    elif e == 'Ending: Body':
-        return 8
-
-def get_ending_line_len(ln):
-    if ln == 1:
-        return 26
-    elif ln == 2:
-        return 23
-    elif ln == 3:
-        return 6
-    elif ln == 4:
-        return 24
-    elif ln == 5:
-        return 17
-    elif ln == 6:
-        return 24
-    elif ln == 7:
-        return 6
-    else:
-        return 1
 
 def parse_char():
 
@@ -201,12 +102,6 @@ def getROM():
     e_filepath.insert("1.0",romfile)
     e_filepath.config(state='disabled')
     ROM = romfile
-
-def writeHexString(file, start_addr, string):
-    offset = int(start_addr, base=16)
-    file.seek(offset)
-    file.write(bytearray.fromhex(string))
-    return True
 
 def patchROM():
     global ROM
@@ -384,6 +279,7 @@ def vis_update_text():
 
 vis_curline = 1
 vis_curpage = 1
+vis_curindex = 0
 sf = 3
 
 vis_default = [
@@ -394,7 +290,8 @@ vis_default = [
     "GREAT !!", "YOU FULFILED YOUR MISSION.",
     "IT WILL REVIVE PEACE IN ", "SPACE.",
     "BUT,IT MAY BE INVADED BY ", "THE OTHER METROID.",
-    "PRAY FOR A TRUE PEACE IN ", "SPACE!"]
+    "PRAY FOR A TRUE PEACE IN ", "SPACE!"
+    ]
 
 vis_alignment = ["left", "left", "left", "left", "left", "left", "left", "left", "right", "left", "left", "left", "left", "left", "left", "left", "left"]
 vis_maxchar = [21, 18, 15, 26, 26, 26, 26, 21, 18, 8, 26, 25, 6, 25, 18, 25, 6]
@@ -403,9 +300,18 @@ vis_offsety = [128*sf, 144*sf, 24*sf, 56*sf, 72*sf, 88*sf, 104*sf, 128*sf, 144*s
 
 def vis_type(evt):
     if evt.char != "":
-        vis_default[vis_curline] += evt.char
+        strlist = list(vis_default[vis_curline])
+        if vis_curindex < len(vis_default[vis_curline]):
+            strlist[vis_curindex] = evt.char
+        elif vis_curindex == len(vis_default[vis_curline]):
+            strlist.append(evt.char)
+        elif vis_curindex > len(vis_default[vis_curline]):
+            dif = (vis_curindex - len(vis_default[vis_curline]))
+            strlist.append(" "*dif + evt.char)
+        vis_default[vis_curline] = "".join(strlist)
         if len(vis_default[vis_curline]) > vis_maxchar[vis_curline]:
             vis_default[vis_curline] = vis_default[vis_curline][:-1]
+        vis_rightarrow(None)
         vis_update_text()
 
 def vis_changealignment(type):
@@ -458,8 +364,33 @@ def vis_backfield(evt):
     vis_update_text()
     return 'break'
 
+def vis_leftarrow(evt):
+    global vis_curindex
+    if not vis_curindex <= 0:
+        vis_curindex -= 1
+    vis_update_text()
+
+def vis_rightarrow(evt):
+    global vis_curindex
+    if not vis_curindex > vis_maxchar[vis_curline]-1:
+        vis_curindex += 1
+    vis_update_text()
+
+def vis_homekey(evt):
+    vis_curindex = 0
+    vis_update_text()
+
+def vis_endkey(evt):
+    print('YO')
+    vis_curindex = vis_maxchar[vis_curline]-1
+    vis_update_text()
+
 def vis_backspace(evt):
-    vis_default[vis_curline] = vis_default[vis_curline][:-1]
+    strlist = list(vis_default[vis_curline])
+    if not len(strlist) <= 0:
+        strlist.pop(vis_curindex-1)
+        vis_default[vis_curline] = "".join(strlist)
+    vis_leftarrow(None)
     vis_update_text()
 
 def change_tab(evt):
@@ -485,9 +416,9 @@ def vis_update_cursor():
         im_field.cursor_on = False
     else:
         im_field.vis_cursor = im_field.create_line(
-            vis_offsetx[vis_curline] + len(vis_default[vis_curline])*24 + vis_getwhitespace(vis_curline)[0]*24,
+            vis_offsetx[vis_curline] + vis_getwhitespace(vis_curline)[0]*12 + vis_curindex*24,
             vis_offsety[vis_curline]-3,
-            vis_offsetx[vis_curline] + len(vis_default[vis_curline])*24 + vis_getwhitespace(vis_curline)[0]*24,
+            vis_offsetx[vis_curline] + vis_getwhitespace(vis_curline)[0]*12 + vis_curindex*24,
             vis_offsety[vis_curline]+24, fill='white', activewidth=3)
         im_field.cursor_on = True
     im_field.after(500, vis_update_cursor)
@@ -518,6 +449,10 @@ im_field.bind("<Tab>", vis_nextfield)
 im_field.bind("<Up>", vis_nextfield)
 im_field.bind("<Shift-Tab>", vis_backfield)
 im_field.bind("<Down>", vis_backfield)
+im_field.bind("<Left>", vis_leftarrow)
+im_field.bind("<Right>", vis_rightarrow)
+im_field.bind("<Home>", vis_homekey)
+im_field.bind("<End>", vis_endkey)
 
 f_tools = Frame(f_visual)
 
@@ -573,7 +508,8 @@ f_tools.grid(row=1,column=2,sticky=NW, padx=8)
 f_visual.grid(row=1,column=1)
 
 if __name__ == "__main__":
-    db = load_db()
+    ns = neshex.neshex("translation.ini")
+    db = ns.db
     img_letters = load_images()
     vis_update_text()
     root.mainloop()
