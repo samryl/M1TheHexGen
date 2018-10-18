@@ -38,7 +38,11 @@ class neshex:
         """Translates an alphanumeric string into a string of hex values based on the translation array."""
 
         _newstring = ""
-        _str = _str.split(" ")
+        _str = _str.upper().split(" ")
+
+        if len(_str) == 1:
+            _str = ' '.join(a+b for a,b in zip(_str[0][::2], _str[0][1::2]))
+            _str = _str.split(" ")
 
         i = 0
         while i < len(_str):
@@ -78,6 +82,100 @@ class neshex:
         file.write(bytearray.fromhex(string))
 
         return True
+
+    def readHexString(self, file, start_addr, length):
+        """
+        Reads a string of hex values from a given file starting at the given address.
+        """
+
+        offset = int(start_addr, base=16)
+
+        file.seek(offset)
+        _string = file.read(length)
+
+        return _string
+
+    def splitHexLines(self, _string, _flags):
+        """
+        Splits a string of hex values (without spaces) into lines based on _flags, each
+        of which serve as a 'line break.'
+        """
+
+        _breakpoints = []
+        _result = []
+
+        i = 0
+        for f in _flags:
+            _flags[i] = str(f)
+            i += 1
+
+        i = 0
+        while i <= len(_string):
+            if _string[i:(i+2)] in _flags:
+                _breakpoints.append(i)
+            i += 2
+
+        i = 0
+        for x in _breakpoints:
+            if i == len(_breakpoints)-1:
+                _result.append(_string[_breakpoints[i]:])
+            else:
+                _result.append(_string[_breakpoints[i]:_breakpoints[i+1]])
+            i += 1
+
+        return _result
+
+    def convertCoordinates(self, section, offset):
+        """
+        Converts two signature bytes to x and y screen coordinates.
+        """
+
+        offset = int(offset, base=16)
+
+        _x = 0
+        _y = 0
+
+        _y = (8*(int(section)-20)) + ((int(offset) // 32)-1)
+
+        _x = int(offset) % 32
+
+        return [_x, _y]
+
+    def readTitleLines(self, file):
+        """
+        Reads the title, intro, and ending text data in bytes from the ROM and translates it
+        into an alphanumeric string.
+        """
+
+        _lines = []
+
+        _title = self.readHexString(file, "0x000510", 45).hex()
+        _title = self.splitHexLines(_title, [20, 21, 22])
+
+        i = 0
+        for _line in _title:
+            _title[i] = {
+                "section" : int(_title[i][0:2]),
+                "offset" : int(_title[i][2:4]),
+                "length" : int(_title[i][4:6], base=16),
+                "x" : self.convertCoordinates(_title[i][0:2],_title[i][2:4])[0],
+                "y" : self.convertCoordinates(_title[i][0:2],_title[i][2:4])[1],
+                "raw" : _title[i][6:],
+                "text" : self.translate_string_to_char(_title[i][6:]),
+                "alignment" : "left"}
+            i += 1
+
+        _intro = self.readHexString(file, "0x000678", 181).hex()
+        _intro = self.splitHexLines(_intro, [20, 21, 22])
+
+        #_ending = self.readHexString(file, "0x0021D5", 45).hex()
+        #_ending = self.splitHexLines(_ending, [20, 21, 22])
+
+        _lines.extend(_title)
+        #_lines.extend(_intro)
+        #_lines.extend(_ending)
+
+        return _lines
 
     def get_line_length(self, e):
         """

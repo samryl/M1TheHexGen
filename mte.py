@@ -9,16 +9,13 @@ from PIL import Image, ImageTk
 
 class MTEApp():
 
-    def __init__(self, dir_path):
+    def __init__(self, dir_path, neshex):
 
         self.dir_path = dir_path
 
-        self.ROM = False
-
-        self.getROM()
+        self.ns = neshex
 
         self._initOrganizers()
-        ## INSERT READFROMROM() ##
 
         self.root = Tk()
         self.root.title("Metroid: The HEX Gen")
@@ -27,6 +24,8 @@ class MTEApp():
         self.root.configure(padx=12, pady=12)
 
         self.f_visual = Frame(self.root)
+
+        self.img_letters = self.load_images()
 
         self.im_field = Canvas(self.f_visual, width=768, height=672)
         self.im_field.grid(row=1,column=1)
@@ -39,9 +38,8 @@ class MTEApp():
                                                              self.vis_offsety[self.vis_curline],
                                                              self.vis_offsetx[self.vis_curline] + self.vis_maxchar[self.vis_curline]*24,
                                                              self.vis_offsety[self.vis_curline]+24, fill='white')
-        self.im_field.after(1000, self.vis_update_cursor)
 
-        #self._initKeybinds()
+        self._initKeybinds()
 
         self.f_tools = Frame(self.f_visual)
 
@@ -96,9 +94,18 @@ class MTEApp():
 
         self.f_visual.grid(row=1,column=1)
 
-        #self.root.mainloop()
+        self.ROM = self.getROM()
 
-        self.img_letters = self.load_images()
+        self.im_field.focus_force()
+
+        self.vis_lines = self.readFromROM()
+
+        self.im_field.after(1000, self.vis_update_cursor)
+        self.im_field.bind("<Key>", self.vis_type)
+
+        self.vis_update_text()
+
+        self.root.mainloop()
 
     def _initOrganizers(self):
         self.vis_curline = 1
@@ -106,16 +113,18 @@ class MTEApp():
         self.vis_curindex = 0
         sf = 3
 
-        self.vis_default = [
-            " PUSH START BUTTON", "* 1986 NINTENDO",
-            "EMERGENCY ORDER", "DEFEAT THE METROID OF",
-            "THE PLANET ZEBETH AND", "DESTROY THE MOTHER BRAIN",
-            "THE MECHANICAL LIFE VEIN", "GALAXY FEDERAL POLICE", "M510 ",
-            "GREAT !!", "YOU FULFILED YOUR MISSION.",
-            "IT WILL REVIVE PEACE IN ", "SPACE.",
-            "BUT,IT MAY BE INVADED BY ", "THE OTHER METROID.",
-            "PRAY FOR A TRUE PEACE IN ", "SPACE!"
-            ]
+        self.vis_default = {}
+
+        #[
+        #    " PUSH START BUTTON", "* 1986 NINTENDO",
+        #    "EMERGENCY ORDER", "DEFEAT THE METROID OF",
+        #    "THE PLANET ZEBETH AND", "DESTROY THE MOTHER BRAIN",
+        #    "THE MECHANICAL LIFE VEIN", "GALAXY FEDERAL POLICE", "M510 ",
+        #    "GREAT !!", "YOU FULFILED YOUR MISSION.",
+        #    "IT WILL REVIVE PEACE IN ", "SPACE.",
+        #    "BUT,IT MAY BE INVADED BY ", "THE OTHER METROID.",
+        #    "PRAY FOR A TRUE PEACE IN ", "SPACE!"
+        #    ]
 
         self.vis_alignment = ["left", "left", "left", "left", "left", "left", "left", "left", "right", "left", "left", "left", "left", "left", "left", "left", "left"]
         self.vis_maxchar = [21, 18, 15, 26, 26, 26, 26, 21, 18, 8, 26, 25, 6, 25, 18, 25, 6]
@@ -153,26 +162,34 @@ class MTEApp():
             self.e_filepath.config(state='disabled')
         except:
             print("GUI is not built, skipping field assignment.")
-        self.ROM = _romfile
+        return _romfile
+
+    def readFromROM(self):
+        f = open(self.ROM, "r+b")
+        _lines = self.ns.readTitleLines(f)
+        f.close()
+        return _lines
 
     def vis_type(self, evt):
         if evt.char != "":
-            strlist = list(self.vis_default[self.vis_curline])
-            if self.vis_curindex < len(self.vis_default[self.vis_curline]):
+
+            strlist = list(self.vis_lines[self.vis_curline]["text"])
+
+            if self.vis_curindex < len(self.vis_lines[self.vis_curline]["text"]):
                 strlist[self.vis_curindex] = evt.char
-            elif self.vis_curindex == len(self.vis_default[self.vis_curline]):
+            elif self.vis_curindex == len(self.vis_lines[self.vis_curline]["text"]):
                 strlist.append(evt.char)
-            elif self.vis_curindex > len(self.vis_default[self.vis_curline]):
-                dif = (self.vis_curindex - len(self.vis_default[self.vis_curline]))
+            elif self.vis_curindex > len(self.vis_lines[self.vis_curline]["text"]):
+                dif = (self.vis_curindex - len(self.vis_lines[self.vis_curline]["text"]))
                 strlist.append(" "*dif + evt.char)
-            self.vis_default[self.vis_curline] = "".join(strlist)
-            if len(self.vis_default[self.vis_curline]) > self.vis_maxchar[self.vis_curline]:
-                self.vis_default[self.vis_curline] = self.vis_default[self.vis_curline][:-1]
+            self.vis_lines[self.vis_curline]["text"] = "".join(strlist)
+            if len(self.vis_lines[self.vis_curline]["text"]) > self.vis_lines[self.vis_curline]["length"]:
+                self.vis_lines[self.vis_curline]["text"] = self.vis_lines[self.vis_curline]["text"][:-1]
             self.vis_rightarrow(None)
             self.vis_update_text()
 
     def vis_changealignment(self, type):
-        self.vis_alignment[self.vis_curline] = type
+        self.vis_lines[self.vis_curline]["alignment"] = type
         self.vis_update_text()
 
     def vis_changepage(self, evt):
@@ -223,7 +240,7 @@ class MTEApp():
         self.vis_update_text()
 
     def vis_rightarrow(self, evt):
-        if not self.vis_curindex > self.vis_maxchar[self.vis_curline]-1:
+        if not self.vis_curindex > self.vis_lines[self.vis_curline]["length"]-1:
             self.vis_curindex += 1
         self.vis_update_text()
 
@@ -231,26 +248,26 @@ class MTEApp():
         self.vis_curindex = 0
         self.vis_update_text()
 
-    def vis_endkey(self, evt): # THIS ISN'T WORKING
-        self.vis_curindex = self.vis_maxchar[vis_curline]-1
+    def vis_endkey(self, evt):
+        self.vis_curindex = self.vis_lines[self.vis_curline]["length"]
         self.vis_update_text()
 
     def vis_backspace(self, evt):
-        strlist = list(self.vis_default[self.vis_curline])
+        strlist = list(self.vis_lines[self.vis_curline]["text"])
         if not len(strlist) <= 0:
             strlist.pop(self.vis_curindex-1)
-            self.vis_default[self.vis_curline] = "".join(strlist)
+            self.vis_lines[self.vis_curline]["text"] = "".join(strlist)
         self.vis_leftarrow(None)
         self.vis_update_text()
 
     def vis_getwhitespace(self, i):
         r = [0,0]
-        dif = self.vis_maxchar[i] - len(self.vis_default[i])
-        if self.vis_alignment[i] == 'left':
+        dif = self.vis_lines[i]["length"] - len(self.vis_lines[i]["text"])
+        if self.vis_lines[i]["alignment"] == 'left':
             r = [0,0]
-        elif self.vis_alignment[i] == 'center':
+        elif self.vis_lines[i]["alignment"] == 'center':
             r = [math.floor(dif/2),math.ceil(dif/2)]
-        elif self.vis_alignment[i] == 'right':
+        elif self.vis_lines[i]["alignment"] == 'right':
             r = [dif,0]
         return r
 
@@ -285,18 +302,18 @@ class MTEApp():
             breakline = 16
 
         while i <= breakline:
-            f = self.vis_default[i].replace("\t", "")
+            f = self.vis_lines[i]["text"].replace("\t", "")
             reg = re.compile('[^a-zA-Z0-9\!\*\,\.\?\-\s]')
             f = reg.sub('', f)
-            self.vis_default[i] = f
+            self.vis_lines[i]["text"] = f
             t = 0
 
-            if self.vis_alignment[i] == "left":
+            if self.vis_lines[i]["alignment"] == "left":
                 _extra_offset = 0
-            elif self.vis_alignment[i] == "center":
-                _extra_offset = math.floor((self.vis_maxchar[i] - len(f)) / 2)*24
-            elif self.vis_alignment[i] == "right":
-                _extra_offset = (self.vis_maxchar[i] - len(f))*24
+            elif self.vis_lines[i]["alignment"] == "center":
+                _extra_offset = math.floor((self.vis_lines[i]["length"] - len(f)) / 2)*24
+            elif self.vis_lines[i]["alignment"] == "right":
+                _extra_offset = (self.vis_lines[i]["length"] - len(f))*24
 
             for l in f:
                 if l == "?":
@@ -314,9 +331,94 @@ class MTEApp():
                 else:
                     ph = self.img_letters[l + ".png"]
 
-                self.im_field.create_image(self.vis_offsetx[i] + _extra_offset + t*24, self.vis_offsety[i], image=ph, anchor=NW)
+                self.im_field.create_image(self.vis_lines[i]["x"]*24 + _extra_offset + t*24, self.vis_lines[i]["y"]*24, image=ph, anchor=NW)
                 t += 1
             i += 1
 
-        self.im_field.create_rectangle(self.vis_offsetx[self.vis_curline]-3,self.vis_offsety[self.vis_curline]-3,self.vis_offsetx[self.vis_curline]+24*self.vis_maxchar[self.vis_curline]+3,self.vis_offsety[self.vis_curline]+24,outline="red")
+        self.im_field.create_rectangle(
+            self.vis_lines[self.vis_curline]["x"]*24-3,
+            self.vis_lines[self.vis_curline]["y"]*24-3,
+            self.vis_lines[self.vis_curline]["x"]*24+24*self.vis_lines[self.vis_curline]["length"]+3,
+            self.vis_lines[self.vis_curline]["y"]*24+24,outline="red")
         self.im_field.update()
+
+    def patchROMScreen(self):
+        if self.ROM != False:
+            f = open(self.ROM, "r+b")
+            t = self.vis_default.copy()
+
+            i = 0
+            for _line in t:
+                if len(_line) < self.vis_lines[i]["length"]:
+                    _dif = self.vis_lines[i]["length"] - len(_line)
+                    if self.vis_lines[i]["alignment"] == 'left':
+                        t[i] = _line + " "*_dif
+                    elif self.vis_lines[i]["alignment"] == 'center':
+                        t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
+                    elif self.vis_lines[i]["alignment"] == 'right':
+                        t[i] = " "*_dif + _line
+                t[i] = self.translate_string_to_hex(t[i])
+                i += 1
+
+            if s_editing.get() == 'Title':
+                self.writeHexString(f, "0x000513", t[0])
+                self.writeHexString(f, "0x00052B", t[1])
+            elif s_editing.get() == 'Intro':
+                self.writeHexString(f, "0x00067B", t[2])
+                self.writeHexString(f, "0x00068D", t[3])
+                self.writeHexString(f, "0x0006AC", t[4])
+                self.writeHexString(f, "0x0006C9", t[5])
+                self.writeHexString(f, "0x0006E6", t[6])
+                self.writeHexString(f, "0x000703", t[7])
+                self.writeHexString(f, "0x00071B", t[8])
+            elif s_editing.get() == 'Ending':
+                #writeHexString(f, "0x0021D5", t[0]) HEADER
+                #writeHexString(f, "0x0021E0", t[0]) BODY
+                #writeHexString(f, "0x0021FE", t[1])
+                #writeHexString(f, "0x002218", t[2])
+                #writeHexString(f, "0x002222", t[3])
+                #writeHexString(f, "0x00223D", t[4])
+                #writeHexString(f, "0x002253", t[5])
+                #writeHexString(f, "0x00226E", t[6])
+                pass
+
+            f.close()
+
+    def patchROMAll(self):
+        if self.ROM != False:
+            f = open(self.ROM, "r+b")
+            t = self.vis_lines.copy()
+
+            i = 0 ## FIX THIS
+            for _line in t:
+                if len(_line) < self.vis_lines[i]["length"]:
+                    _dif = self.vis_lines[i]["length"] - len(_line)
+                    if self.vis_lines[i]["alignment"] == 'left':
+                        t[i] = _line + " "*_dif
+                    elif self.vis_lines[i]["alignment"] == 'center':
+                        t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
+                    elif self.vis_lines[i]["alignment"] == 'right':
+                        t[i] = " "*_dif + _line
+                t[i] = self.translate_string_to_hex(t[i])
+                i += 1
+
+            self.writeHexString(f, "0x000513", t[0])
+            self.writeHexString(f, "0x00052B", t[1])
+            self.writeHexString(f, "0x00067B", t[2])
+            self.writeHexString(f, "0x00068D", t[3])
+            self.writeHexString(f, "0x0006AC", t[4])
+            self.writeHexString(f, "0x0006C9", t[5])
+            self.writeHexString(f, "0x0006E6", t[6])
+            self.writeHexString(f, "0x000703", t[7])
+            self.writeHexString(f, "0x00071B", t[8])
+
+            #writeHexString(f, "0x0021D5", t[0]) HEADER
+            #writeHexString(f, "0x0021E0", t[0]) BODY
+            #writeHexString(f, "0x0021FE", t[1])
+            #writeHexString(f, "0x002218", t[2])
+            #writeHexString(f, "0x002222", t[3])
+            #writeHexString(f, "0x00223D", t[4])
+            #writeHexString(f, "0x002253", t[5])
+            #writeHexString(f, "0x00226E", t[6])
+
+            f.close()

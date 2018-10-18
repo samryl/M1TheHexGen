@@ -238,4 +238,4 @@ if __name__ == "__main__":
     #img_letters = load_images()
     #vis_update_text()
     #root.mainloop()
-    App = mte.MTEApp(dir_path)
+    App = mte.MTEApp(dir_path, ns)
