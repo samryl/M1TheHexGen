@@ -108,9 +108,11 @@ class MTEApp():
         self.root.mainloop()
 
     def _initOrganizers(self):
+
         self.vis_curline = 1
         self.vis_curpage = 1
         self.vis_curindex = 0
+        
         sf = 3
 
         self.vis_default = {}
@@ -277,10 +279,10 @@ class MTEApp():
             self.im_field.cursor_on = False
         else:
             self.im_field.vis_cursor = self.im_field.create_line(
-                self.vis_offsetx[self.vis_curline] + self.vis_getwhitespace(self.vis_curline)[0]*12 + self.vis_curindex*24,
-                self.vis_offsety[self.vis_curline]-3,
-                self.vis_offsetx[self.vis_curline] + self.vis_getwhitespace(self.vis_curline)[0]*12 + self.vis_curindex*24,
-                self.vis_offsety[self.vis_curline]+24, fill='white', activewidth=3)
+                self.vis_lines[self.vis_curline]["x"]*24 + self.vis_getwhitespace(self.vis_curline)[0]*24 + self.vis_curindex*24,
+                self.vis_lines[self.vis_curline]["y"]*24-3,
+                self.vis_lines[self.vis_curline]["x"]*24 + self.vis_getwhitespace(self.vis_curline)[0]*24 + self.vis_curindex*24,
+                self.vis_lines[self.vis_curline]["y"]*24+24, fill='white', activewidth=3)
             self.im_field.cursor_on = True
         self.im_field.after(500, self.vis_update_cursor)
         self.im_field.update()
