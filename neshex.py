@@ -101,6 +101,8 @@ class neshex:
         of which serve as a 'line break.'
         """
 
+        print("Working on string: " + _string)
+
         _breakpoints = []
         _result = []
 
@@ -113,7 +115,11 @@ class neshex:
         while i <= len(_string):
             if _string[i:(i+2)] in _flags:
                 _breakpoints.append(i)
+                print(_string[i+4:i+6])
+                print(" > Found string of length: " + str(int(_string[i+4:i+6], base=16)))
+                i += int(_string[i+4:i+6], base=16)*2 + 4
             i += 2
+            print(" > Remaining: " + _string[i:])
 
         i = 0
         for x in _breakpoints:
@@ -131,13 +137,14 @@ class neshex:
         """
 
         offset = int(offset, base=16)
+        section = (int(section, base=16) - 32) - 4*((int(section, base=16) - 32) // 4)
 
         _x = 0
         _y = 0
 
-        _y = (8*(int(section)-20)) + ((int(offset) // 32)-1)
+        _y = (8*(section)) + ((offset // 32)-1)
 
-        _x = int(offset) % 32
+        _x = offset % 32
 
         return [_x, _y]
 
@@ -150,29 +157,42 @@ class neshex:
         _lines = []
 
         _title = self.readHexString(file, "0x000510", 45).hex()
-        _title = self.splitHexLines(_title, [20, 21, 22])
+        _title = self.splitHexLines(_title, list(range(20,27)))
 
         i = 0
         for _line in _title:
             _title[i] = {
-                "section" : int(_title[i][0:2]),
-                "offset" : int(_title[i][2:4]),
+                "section" : int(_title[i][0:2], base=16),
+                "offset" : int(_title[i][2:4], base=16),
                 "length" : int(_title[i][4:6], base=16),
                 "x" : self.convertCoordinates(_title[i][0:2],_title[i][2:4])[0],
                 "y" : self.convertCoordinates(_title[i][0:2],_title[i][2:4])[1],
                 "raw" : _title[i][6:],
-                "text" : self.translate_string_to_char(_title[i][6:]),
+                "text" : self.translate_string_to_char(_title[i][6:]).rstrip(),
                 "alignment" : "left"}
             i += 1
 
         _intro = self.readHexString(file, "0x000678", 181).hex()
-        _intro = self.splitHexLines(_intro, [20, 21, 22])
+        _intro = self.splitHexLines(_intro, list(range(20,27)))
+
+        i = 0
+        for _line in _intro:
+            _intro[i] = {
+                "section" : int(_intro[i][0:2], base=16),
+                "offset" : int(_intro[i][2:4], base=16),
+                "length" : int(_intro[i][4:6], base=16),
+                "x" : self.convertCoordinates(_intro[i][0:2],_intro[i][2:4])[0],
+                "y" : self.convertCoordinates(_intro[i][0:2],_intro[i][2:4])[1],
+                "raw" : _intro[i][6:],
+                "text" : self.translate_string_to_char(_intro[i][6:]),
+                "alignment" : "left"}
+            i += 1
 
         #_ending = self.readHexString(file, "0x0021D5", 45).hex()
         #_ending = self.splitHexLines(_ending, [20, 21, 22])
 
         _lines.extend(_title)
-        #_lines.extend(_intro)
+        _lines.extend(_intro)
         #_lines.extend(_ending)
 
         return _lines

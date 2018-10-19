@@ -1,5 +1,5 @@
 # This is where the GUI class is held.
-import sys, itertools, math, re, os
+import sys, itertools, math, re, os, pprint
 from os import listdir
 from os.path import isfile, join
 from collections import OrderedDict
@@ -12,6 +12,8 @@ class MTEApp():
     def __init__(self, dir_path, neshex):
 
         self.dir_path = dir_path
+
+        self.pp = pprint.PrettyPrinter(indent=2)
 
         self.ns = neshex
 
@@ -112,7 +114,7 @@ class MTEApp():
         self.vis_curline = 1
         self.vis_curpage = 1
         self.vis_curindex = 0
-        
+
         sf = 3
 
         self.vis_default = {}
@@ -169,6 +171,7 @@ class MTEApp():
     def readFromROM(self):
         f = open(self.ROM, "r+b")
         _lines = self.ns.readTitleLines(f)
+        self.pp.pprint(_lines)
         f.close()
         return _lines
 
@@ -303,38 +306,43 @@ class MTEApp():
             i = 9
             breakline = 16
 
-        while i <= breakline:
-            f = self.vis_lines[i]["text"].replace("\t", "")
-            reg = re.compile('[^a-zA-Z0-9\!\*\,\.\?\-\s]')
-            f = reg.sub('', f)
-            self.vis_lines[i]["text"] = f
-            t = 0
+        i = 0
+        for x in self.vis_lines: # for every line
+        
+            if (((self.vis_lines[i]["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
 
-            if self.vis_lines[i]["alignment"] == "left":
-                _extra_offset = 0
-            elif self.vis_lines[i]["alignment"] == "center":
-                _extra_offset = math.floor((self.vis_lines[i]["length"] - len(f)) / 2)*24
-            elif self.vis_lines[i]["alignment"] == "right":
-                _extra_offset = (self.vis_lines[i]["length"] - len(f))*24
+                # DRAW
+                f = self.vis_lines[i]["text"].replace("\t", "")
+                reg = re.compile('[^a-zA-Z0-9\!\*\,\.\?\-\s]')
+                f = reg.sub('', f)
+                self.vis_lines[i]["text"] = f
 
-            for l in f:
-                if l == "?":
-                    ph = self.img_letters["question.png"]
-                elif l == " ":
-                    ph = self.img_letters["space.png"]
-                elif l == "*":
-                    ph = self.img_letters["copyright.png"]
-                elif l == ".":
-                    ph = self.img_letters["period.png"]
-                elif l == ",":
-                    ph = self.img_letters["comma.png"]
-                elif l.islower():
-                    ph = self.img_letters[l + "l.png"]
-                else:
-                    ph = self.img_letters[l + ".png"]
+                if self.vis_lines[i]["alignment"] == "left":
+                    _extra_offset = 0
+                elif self.vis_lines[i]["alignment"] == "center":
+                    _extra_offset = math.floor((self.vis_lines[i]["length"] - len(f)) / 2)*24
+                elif self.vis_lines[i]["alignment"] == "right":
+                    _extra_offset = (self.vis_lines[i]["length"] - len(f))*24
 
-                self.im_field.create_image(self.vis_lines[i]["x"]*24 + _extra_offset + t*24, self.vis_lines[i]["y"]*24, image=ph, anchor=NW)
-                t += 1
+                t = 0
+                for l in f:
+                    if l == "?":
+                        ph = self.img_letters["question.png"]
+                    elif l == " ":
+                        ph = self.img_letters["space.png"]
+                    elif l == "*":
+                        ph = self.img_letters["copyright.png"]
+                    elif l == ".":
+                        ph = self.img_letters["period.png"]
+                    elif l == ",":
+                        ph = self.img_letters["comma.png"]
+                    elif l.islower():
+                        ph = self.img_letters[l + "l.png"]
+                    else:
+                        ph = self.img_letters[l + ".png"]
+
+                    self.im_field.create_image(self.vis_lines[i]["x"]*24 + _extra_offset + t*24, self.vis_lines[i]["y"]*24, image=ph, anchor=NW)
+                    t += 1
             i += 1
 
         self.im_field.create_rectangle(
@@ -342,6 +350,10 @@ class MTEApp():
             self.vis_lines[self.vis_curline]["y"]*24-3,
             self.vis_lines[self.vis_curline]["x"]*24+24*self.vis_lines[self.vis_curline]["length"]+3,
             self.vis_lines[self.vis_curline]["y"]*24+24,outline="red")
+        print(self.vis_lines[self.vis_curline]["x"]*24-3,
+        self.vis_lines[self.vis_curline]["y"]*24-3,
+        self.vis_lines[self.vis_curline]["x"]*24+24*self.vis_lines[self.vis_curline]["length"]+3,
+        self.vis_lines[self.vis_curline]["y"]*24+24)
         self.im_field.update()
 
     def patchROMScreen(self):
