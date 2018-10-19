@@ -148,11 +148,33 @@ class neshex:
 
         return [_x, _y]
 
+    def encodeCoordinates(self, x, y): # NOT DONE DOESNT WORK DONT USE
+        """
+        Converts x and y screen coordinates to two signature bytes
+        """
+
+        _section = ((y // 32) // 4)
+        _offset = x
+
+        offset = int(offset, base=16)
+        section = (int(section, base=16) - 32) - 4*((int(section, base=16) - 32) // 4)
+
+        _x = 0
+        _y = 0
+
+        _y = (8*(section)) + ((offset // 32)-1)
+
+        _x = offset % 32
+
+        return [0, 0]
+
     def readTitleLines(self, file):
         """
         Reads the title, intro, and ending text data in bytes from the ROM and translates it
         into an alphanumeric string.
         """
+
+        ## NOTE: These ought to be sorted based on their X/Y bits, not based on their location in the ROM. This will allow us an unlimited amount of lines per screen, space permitting.
 
         _lines = []
 
@@ -160,8 +182,10 @@ class neshex:
         _title = self.splitHexLines(_title, list(range(20,27)))
 
         i = 0
+        _roffset = int("0x000510", base=16)
         for _line in _title:
             _title[i] = {
+                "location": _roffset,
                 "section" : int(_title[i][0:2], base=16),
                 "offset" : int(_title[i][2:4], base=16),
                 "length" : int(_title[i][4:6], base=16),
@@ -170,14 +194,17 @@ class neshex:
                 "raw" : _title[i][6:],
                 "text" : self.translate_string_to_char(_title[i][6:]).rstrip(),
                 "alignment" : "left"}
+            _roffset += _title[i]["length"]
             i += 1
 
         _intro = self.readHexString(file, "0x000678", 181).hex()
         _intro = self.splitHexLines(_intro, list(range(20,27)))
 
         i = 0
+        _roffset = int("0x000678", base=16)
         for _line in _intro:
             _intro[i] = {
+                "location": _roffset,
                 "section" : int(_intro[i][0:2], base=16),
                 "offset" : int(_intro[i][2:4], base=16),
                 "length" : int(_intro[i][4:6], base=16),
@@ -186,6 +213,7 @@ class neshex:
                 "raw" : _intro[i][6:],
                 "text" : self.translate_string_to_char(_intro[i][6:]),
                 "alignment" : "left"}
+            _roffset += _intro[i]["length"]
             i += 1
 
         #_ending = self.readHexString(file, "0x0021D5", 45).hex()

@@ -1,4 +1,11 @@
 # This is where the GUI class is held.
+
+
+## ON TYPE, THIS SHOULD ALSO UPDATE THE RAW PART OF THE DICT, THEN WE DON'T HAVE TO TRANSLATE ON PATCH
+## THE EDITOR WILL REIGN IN THE LENGTH OF THE STRINGS SO WE DON'T HAVE TO WORRY ABOUT OVERWRITING SOMETHING
+## NEED TO DO THAT NEXT SO IT WILL PATCH CORRECTLY
+
+
 import sys, itertools, math, re, os, pprint
 from os import listdir
 from os.path import isfile, join
@@ -254,7 +261,7 @@ class MTEApp():
         self.vis_update_text()
 
     def vis_endkey(self, evt):
-        self.vis_curindex = self.vis_lines[self.vis_curline]["length"]
+        self.vis_curindex = len(self.vis_lines[self.vis_curline]["text"])
         self.vis_update_text()
 
     def vis_backspace(self, evt):
@@ -308,7 +315,7 @@ class MTEApp():
 
         i = 0
         for x in self.vis_lines: # for every line
-        
+
             if (((self.vis_lines[i]["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
 
                 # DRAW
@@ -356,36 +363,54 @@ class MTEApp():
         self.vis_lines[self.vis_curline]["y"]*24+24)
         self.im_field.update()
 
-    def patchROMScreen(self):
+    def patchROMAll(self):
+
         if self.ROM != False:
+
             f = open(self.ROM, "r+b")
-            t = self.vis_default.copy()
+
+            r = self.vis_lines.copy()
+            t = []
 
             i = 0
-            for _line in t:
-                if len(_line) < self.vis_lines[i]["length"]:
-                    _dif = self.vis_lines[i]["length"] - len(_line)
-                    if self.vis_lines[i]["alignment"] == 'left':
-                        t[i] = _line + " "*_dif
-                    elif self.vis_lines[i]["alignment"] == 'center':
-                        t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
-                    elif self.vis_lines[i]["alignment"] == 'right':
-                        t[i] = " "*_dif + _line
-                t[i] = self.translate_string_to_hex(t[i])
-                i += 1
+            for _entry in r: # FOR EVERY LINE
 
-            if s_editing.get() == 'Title':
-                self.writeHexString(f, "0x000513", t[0])
-                self.writeHexString(f, "0x00052B", t[1])
-            elif s_editing.get() == 'Intro':
-                self.writeHexString(f, "0x00067B", t[2])
-                self.writeHexString(f, "0x00068D", t[3])
-                self.writeHexString(f, "0x0006AC", t[4])
-                self.writeHexString(f, "0x0006C9", t[5])
-                self.writeHexString(f, "0x0006E6", t[6])
-                self.writeHexString(f, "0x000703", t[7])
-                self.writeHexString(f, "0x00071B", t[8])
-            elif s_editing.get() == 'Ending':
+                if (((_entry["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
+
+                    _line = _entry["text"]
+                    t.append(_line) # This SHOULD set the index to whatever i is since we're just going forward
+
+                    if len(_line) < self.vis_lines[i]["length"]:
+
+                        _dif = self.vis_lines[i]["length"] - len(_line)
+
+                        # ADD WHITESPACE
+                        if self.vis_lines[i]["alignment"] == 'left':
+                            t[i] = _line + " "*_dif
+                        elif self.vis_lines[i]["alignment"] == 'center':
+                            t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
+                        elif self.vis_lines[i]["alignment"] == 'right':
+                            t[i] = " "*_dif + _line
+                    print(t[i])
+                    t[i] = self.ns.translate_string_to_hex(t[i])
+
+                    i += 1
+
+            # # NOTE: THIS IS WHERE WRITING GETS WONKY
+            # Now we need to check the write offset and put strings there.
+
+            if self.s_editing.get() == 'Title':
+                self.ns.writeHexString(f, "0x000513", t[0])
+                self.ns.writeHexString(f, "0x00052B", t[1])
+            elif self.s_editing.get() == 'Intro':
+                self.ns.writeHexString(f, "0x00067B", t[2])
+                self.ns.writeHexString(f, "0x00068D", t[3])
+                self.ns.writeHexString(f, "0x0006AC", t[4])
+                self.ns.writeHexString(f, "0x0006C9", t[5])
+                self.ns.writeHexString(f, "0x0006E6", t[6])
+                self.ns.writeHexString(f, "0x000703", t[7])
+                self.ns.writeHexString(f, "0x00071B", t[8])
+            elif self.s_editing.get() == 'Ending':
                 #writeHexString(f, "0x0021D5", t[0]) HEADER
                 #writeHexString(f, "0x0021E0", t[0]) BODY
                 #writeHexString(f, "0x0021FE", t[1])
@@ -398,8 +423,10 @@ class MTEApp():
 
             f.close()
 
-    def patchROMAll(self):
+    def patchROMScreen(self): # DEFUNCT
+
         if self.ROM != False:
+
             f = open(self.ROM, "r+b")
             t = self.vis_lines.copy()
 
@@ -413,18 +440,18 @@ class MTEApp():
                         t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
                     elif self.vis_lines[i]["alignment"] == 'right':
                         t[i] = " "*_dif + _line
-                t[i] = self.translate_string_to_hex(t[i])
+                t[i] = self.ns.translate_string_to_hex(t[i])
                 i += 1
 
-            self.writeHexString(f, "0x000513", t[0])
-            self.writeHexString(f, "0x00052B", t[1])
-            self.writeHexString(f, "0x00067B", t[2])
-            self.writeHexString(f, "0x00068D", t[3])
-            self.writeHexString(f, "0x0006AC", t[4])
-            self.writeHexString(f, "0x0006C9", t[5])
-            self.writeHexString(f, "0x0006E6", t[6])
-            self.writeHexString(f, "0x000703", t[7])
-            self.writeHexString(f, "0x00071B", t[8])
+            self.ns.writeHexString(f, "0x000513", t[0])
+            self.ns.writeHexString(f, "0x00052B", t[1])
+            self.ns.writeHexString(f, "0x00067B", t[2])
+            self.ns.writeHexString(f, "0x00068D", t[3])
+            self.ns.writeHexString(f, "0x0006AC", t[4])
+            self.ns.writeHexString(f, "0x0006C9", t[5])
+            self.ns.writeHexString(f, "0x0006E6", t[6])
+            self.ns.writeHexString(f, "0x000703", t[7])
+            self.ns.writeHexString(f, "0x00071B", t[8])
 
             #writeHexString(f, "0x0021D5", t[0]) HEADER
             #writeHexString(f, "0x0021E0", t[0]) BODY
