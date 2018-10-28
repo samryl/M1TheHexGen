@@ -1,9 +1,10 @@
 # This is where the GUI class is held.
 
 
-## ON TYPE, THIS SHOULD ALSO UPDATE THE RAW PART OF THE DICT, THEN WE DON'T HAVE TO TRANSLATE ON PATCH
+## ON TYPE, THIS SHOULD ALSO UPDATE THE RAW PART OF THE DICT, THEN WE DON'T HAVE TO TRANSLATE ON PATCH [ ]
 ## THE EDITOR WILL REIGN IN THE LENGTH OF THE STRINGS SO WE DON'T HAVE TO WORRY ABOUT OVERWRITING SOMETHING
-## NEED TO DO THAT NEXT SO IT WILL PATCH CORRECTLY
+## NEED TO DO THAT NEXT SO IT WILL PATCH CORRECTLY [ ]
+## WE NEED TO MAKE THE GUI SPACE EDITOR AND SEPARATE EVERYTHING INTO BANKS [ ]
 
 
 import sys, itertools, math, re, os, pprint
@@ -96,6 +97,11 @@ class MTEApp():
         self.b_patchall = Button(self.f_patchbuttons, text="Patch All", command=self.patchROMAll)
         self.b_patchall.grid(row=1,column=1, padx=4, pady=4)
         self.f_patchbuttons.grid(row=1,column=1)
+
+        self.f_utils = Frame(self.f_tools)
+        self.b_openlineeditor = Button(self.f_utils, text="Line Editor", command=self.openLineEditor)
+        self.b_openlineeditor.grid(row=0,column=0)
+        self.f_utils.grid(row=5,column=1)
 
         self.f_file.grid(row=4,column=1, pady=4)
 
@@ -397,7 +403,10 @@ class MTEApp():
                     i += 1
 
             # # NOTE: THIS IS WHERE WRITING GETS WONKY
-            # Now we need to check the write offset and put strings there.
+            # Now we need to check the write offset and put strings there. [ ]
+            # There are 3 banks where we can put text, 2 for the intro and 1 for the ending
+            # Each entry in the dict should have a "bank" property [√]
+            # Then we will write the banks individually [ ]
 
             if self.s_editing.get() == 'Title':
                 self.ns.writeHexString(f, "0x000513", t[0])
@@ -422,6 +431,9 @@ class MTEApp():
                 pass
 
             f.close()
+
+    def openLineEditor(self):
+        self.w_lineeditor = MTELineEditor(self.root)
 
     def patchROMScreen(self): # DEFUNCT
 
@@ -463,3 +475,48 @@ class MTEApp():
             #writeHexString(f, "0x00226E", t[6])
 
             f.close()
+
+class MTELineEditor(Toplevel):
+
+    #### PRESPLAIN
+    ##
+    ## [ ] This class will need access to the following objects from the parent class:
+    ##  - vis_lines
+    ##  - vis_curline
+    ##
+    ## [ ] It will need to edit these as well
+    ##
+    ## [ ] The code will draw a series of rectangles on a canvas object, keeping track of the X coordinate
+    ## of each rectangle's beginning and end.
+    ##
+    ## [ ] Right mouse click over the canvas will trigger code, which says basically:
+    ## if(mouse.x within range of a beginning or end coord){
+    ##     begin_drag()
+    ## }
+    ##
+    ## [ ] Once the drag is complete, the proper vis_lines entries will be adjusted to the proper values.
+    ##
+    ## [ ] There will also be a button which launches yet another dialog asking the length of the new string
+    ## to be added. It will need to automatically guess the value based on space remaining (capped at 20).
+    ##
+    ## [ ] There will need to be a tab for each bank of text.
+    ##
+    ## [ ] There will need to also be spinbox editors for length and content of the lines
+    ##
+    ## [ ] There will need to be a raw hex editor containing all the data from the bank
+    ##
+    ## [ ] There will need to be an editor for the X and Y coordinates which automatically updates the
+    ## section and offset values
+    ##
+    ## [√] My tea is cold
+    ##
+
+    def __init__(self, master):
+
+        Toplevel.__init__(self)
+
+        s_plaintext = StringVar()
+        s_plaintext.set("")
+
+        self.t = Label(self, textvar=s_plaintext)
+        self.t.grid(row=0,column=0)

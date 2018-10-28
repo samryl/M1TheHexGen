@@ -101,8 +101,6 @@ class neshex:
         of which serve as a 'line break.'
         """
 
-        print("Working on string: " + _string)
-
         _breakpoints = []
         _result = []
 
@@ -115,11 +113,8 @@ class neshex:
         while i <= len(_string):
             if _string[i:(i+2)] in _flags:
                 _breakpoints.append(i)
-                print(_string[i+4:i+6])
-                print(" > Found string of length: " + str(int(_string[i+4:i+6], base=16)))
                 i += int(_string[i+4:i+6], base=16)*2 + 4
             i += 2
-            print(" > Remaining: " + _string[i:])
 
         i = 0
         for x in _breakpoints:
@@ -174,7 +169,7 @@ class neshex:
         into an alphanumeric string.
         """
 
-        ## NOTE: These ought to be sorted based on their X/Y bits, not based on their location in the ROM. This will allow us an unlimited amount of lines per screen, space permitting.
+        ## NOTE: These ought to be sorted based on their X/Y bits, not based on their location in the ROM. This will allow us an unlimited amount of lines per screen, space permitting. [√]
 
         _lines = []
 
@@ -193,6 +188,7 @@ class neshex:
                 "y" : self.convertCoordinates(_title[i][0:2],_title[i][2:4])[1],
                 "raw" : _title[i][6:],
                 "text" : self.translate_string_to_char(_title[i][6:]).rstrip(),
+                "bank": 1,
                 "alignment" : "left"}
             _roffset += _title[i]["length"]
             i += 1
@@ -203,6 +199,7 @@ class neshex:
         i = 0
         _roffset = int("0x000678", base=16)
         for _line in _intro:
+            print(_line)
             _intro[i] = {
                 "location": _roffset,
                 "section" : int(_intro[i][0:2], base=16),
@@ -212,6 +209,7 @@ class neshex:
                 "y" : self.convertCoordinates(_intro[i][0:2],_intro[i][2:4])[1],
                 "raw" : _intro[i][6:],
                 "text" : self.translate_string_to_char(_intro[i][6:]),
+                "bank": 1,
                 "alignment" : "left"}
             _roffset += _intro[i]["length"]
             i += 1
