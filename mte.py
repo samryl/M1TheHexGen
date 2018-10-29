@@ -7,7 +7,7 @@
 ## WE NEED TO MAKE THE GUI SPACE EDITOR AND SEPARATE EVERYTHING INTO BANKS [ ]
 
 
-import sys, itertools, math, re, os, pprint
+import sys, itertools, math, re, os, pprint, random
 from os import listdir
 from os.path import isfile, join
 from collections import OrderedDict
@@ -433,7 +433,7 @@ class MTEApp():
             f.close()
 
     def openLineEditor(self):
-        self.w_lineeditor = MTELineEditor(self.root)
+        self.w_lineeditor = MTELineEditor(self)
 
     def patchROMScreen(self): # DEFUNCT
 
@@ -480,7 +480,7 @@ class MTELineEditor(Toplevel):
 
     #### PRESPLAIN
     ##
-    ## [ ] This class will need access to the following objects from the parent class:
+    ## [√] This class will need access to the following objects from the parent class:
     ##  - vis_lines
     ##  - vis_curline
     ##
@@ -515,8 +515,101 @@ class MTELineEditor(Toplevel):
 
         Toplevel.__init__(self)
 
-        s_plaintext = StringVar()
-        s_plaintext.set("")
+        self.title('MTE Line Editor')
 
-        self.t = Label(self, textvar=s_plaintext)
-        self.t.grid(row=0,column=0)
+        self.resizable(False,False)
+        self.geometry('480x240')
+
+        self.p = master
+
+        self.f_main = Frame(self,padx=4,pady=4)
+
+        self.f_data = Frame(self.f_main)
+
+        self.l_plaintext = Label(self.f_data,text="Text: ")
+        self.l_plaintext.grid(row=0,column=0,sticky=E)
+
+        self.s_curtext = StringVar()
+        self.s_curtext.set("")
+        self.e_plaintext = Entry(self.f_data, textvariable=self.s_curtext, width=60)
+        self.e_plaintext.grid(row=0,column=1,sticky=W)
+
+        self.l_length = Label(self.f_data,text="Length: ")
+        self.l_length.grid(row=1,column=0,sticky=E)
+
+        self.l_curtext = 0
+        self.e_length = Spinbox(self.f_data, from_=0, to=32, width=2, textvariable=self.l_curtext)
+        self.e_length.grid(row=1,column=1,sticky=W)
+
+        self.l_coords = Label(self.f_data,text="X/Y: ")
+        self.l_coords.grid(row=2,column=0,sticky=E)
+
+        self.f_coordsentry = Frame(self.f_data)
+
+        self.e_coordsX = Spinbox(self.f_coordsentry, from_=0, to=32, width=2)
+        self.e_coordsX.grid(row=0,column=0)
+        self.e_coordsY = Spinbox(self.f_coordsentry, from_=0, to=32, width=2)
+        self.e_coordsY.grid(row=0,column=1)
+
+        self.f_coordsentry.grid(row=2,column=1,sticky=W)
+
+        self.f_data.grid(row=0,column=0,sticky=W)
+
+        self.c_lines = Canvas(self.f_main)
+        self.c_lines.grid(row=1,column=0)
+        self.c_lines.data = []
+        self.c_lines.selected = 0
+
+        self.c_lines.bind("<Button 1>",self.lineclicked)
+
+        self.f_main.grid(row=0,column=0,sticky=W)
+
+        self.vis_update_everything()
+
+    def lineclicked(self,event):
+        for _x in self.c_lines.data:
+            if event.x < _x["x2"] and event.x > _x["x1"]:
+                self.c_lines.selected = _x["index"]
+                self.vis_update_everything()
+                break
+
+    def vis_drawrectangle(self, x1, y1, x2, y2, color):
+        self.c_lines.create_rectangle(x1,y1,x2,y2,fill=color)
+        self.c_lines.update()
+
+    def vis_drawgraph(self, bank, bank_length):
+        colors = ["blue","orange","purple","pink","grey","black","yellow","teal","brown"]
+        _basewidth = 472
+        _i = 0
+        _n = 0
+        for _line in self.p.vis_lines:
+            if _line["bank"] == bank:
+                self.c_lines.data.append({
+                    "x1": _i,
+                    "x2": _i+(_line["length"]/bank_length)*_basewidth,
+                    "length": _line["length"],
+                    "index": _n,
+                    "text": _line["text"]
+                })
+                self.vis_drawrectangle(
+                    _i, 0,
+                    _i+(_line["length"]/bank_length)*_basewidth, 16,
+                    colors[_n]
+                )
+                _i += (_line["length"]/bank_length)*_basewidth
+                _n += 1
+
+    def vis_update_canvas(self):
+        self.c_lines.delete(ALL)
+        self.vis_drawgraph(1, 226) # [ ] FINISH THIS
+        self.vis_drawrectangle(
+            self.c_lines.data[self.c_lines.selected]["x1"],
+            0,
+            self.c_lines.data[self.c_lines.selected]["x2"],
+            16, "red"
+        )
+
+    def vis_update_everything(self):
+        self.vis_update_canvas()
+        self.l_curtext = self.c_lines.data[self.c_lines.selected]["length"]
+        self.s_curtext.set(self.c_lines.data[self.c_lines.selected]["text"])
