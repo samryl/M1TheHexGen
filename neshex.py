@@ -1,3 +1,5 @@
+import uuid
+
 class neshex:
 
     def __init__(self, translationfile):
@@ -189,7 +191,8 @@ class neshex:
                 "raw" : _title[i][6:],
                 "text" : self.translate_string_to_char(_title[i][6:]).rstrip(),
                 "bank": 1,
-                "alignment" : "left"}
+                "alignment" : "left",
+                "id": uuid.uuid4().hex[:6].upper()}
             _roffset += _title[i]["length"]
             i += 1
 
@@ -210,7 +213,8 @@ class neshex:
                 "raw" : _intro[i][6:],
                 "text" : self.translate_string_to_char(_intro[i][6:]),
                 "bank": 1,
-                "alignment" : "left"}
+                "alignment" : "left",
+                "id": uuid.uuid4().hex[:6].upper()}
             _roffset += _intro[i]["length"]
             i += 1
 

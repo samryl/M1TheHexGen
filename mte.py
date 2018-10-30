@@ -518,7 +518,7 @@ class MTELineEditor(Toplevel):
         self.title('MTE Line Editor')
 
         self.resizable(False,False)
-        self.geometry('480x240')
+        self.geometry('1000x240')
 
         self.p = master
 
@@ -556,37 +556,65 @@ class MTELineEditor(Toplevel):
 
         self.f_data.grid(row=0,column=0,sticky=W)
 
-        self.c_lines = Canvas(self.f_main, width=472, height=32)
+        _canvas_width = 800
+        _canvas_height = 64
+        self.c_lines = Canvas(self.f_main, width=_canvas_width, height=_canvas_height)
         self.c_lines.grid(row=1,column=0)
         self.c_lines.data = []
         _i = 0
         _n = 0
         colors = ["blue","orange","purple","pink","grey","black","yellow","teal","brown"]
+        self.bank_lengths = [0,0,0]
+        self.current_bank = 1
         for _line in self.p.vis_lines:
             self.c_lines.data.append({
                 "x1": _i,
-                "x2": _i+(_line["length"]/self.bank_length(1))*476,
+                "x2": _i+(_line["length"]/self.bank_length(1))*_canvas_width,
                 "length": _line["length"],
                 "index": _n,
                 "text": _line["text"],
                 "bank": _line["bank"],
-                "color": colors[_n]
+                "color": colors[_n],
+                "id": _line["id"]
             })
-            _i += (_line["length"]/self.bank_length(1))*476
+            self.bank_lengths[_line["bank"]-1] += 1
+            _i += (_line["length"]/self.bank_length(1))*_canvas_width
             _n += 1
         self.c_lines.cevent = { "xoff": 0, "yoff": 0 }
         self.c_lines.selected = 0
         self.c_lines.mousexdiff = 0
-        self.c_lines.lheight = 32
+        self.c_lines.lheight = _canvas_height
         self.c_lines.MOVINGRECT = None
-
+        self.c_lines.MOVINGRECTLINE = None
+        self.c_lines.MOVINGHOVERIND = None
 
         self.c_lines.bind("<Button 1>",self.lineclicked)
         self.c_lines.bind("<B1-Motion>",self.linedrag)
         self.c_lines.bind("<ButtonRelease-1>",self.linerelease)
+        self.c_lines.bind("<Left>",self.vis_leftarrow)
+        self.c_lines.bind("<Right>",self.vis_rightarrow)
+
+        self.s_curtext.trace("w", self.vis_textchanged)
 
         self.f_main.grid(row=0,column=0,sticky=W)
 
+        self.c_lines.focus_set()
+
+        self.vis_update_everything()
+
+    def vis_textchanged(self, *args):
+        self.c_lines.data[self.c_lines.selected]["text"] = self.s_curtext.get()
+
+    def vis_rightarrow(self,event):
+        self.c_lines.selected += 1
+        if self.c_lines.selected >= self.bank_lengths[self.current_bank-1]:
+            self.c_lines.selected = 0
+        self.vis_update_everything()
+
+    def vis_leftarrow(self,event):
+        self.c_lines.selected -= 1
+        if self.c_lines.selected < 0:
+            self.c_lines.selected = self.bank_lengths[self.current_bank-1]-1
         self.vis_update_everything()
 
     def lineclicked(self,event):
@@ -600,12 +628,23 @@ class MTELineEditor(Toplevel):
                 break
 
     def linedrag(self,event):
+
         self.c_lines.mousexdiff += event.x - self.c_lines.mousexdiff
         self.c_lines.delete(self.c_lines.MOVINGRECT)
+        self.c_lines.delete(self.c_lines.MOVINGRECTLINE)
+        self.c_lines.delete(self.c_lines.MOVINGHOVERIND)
+        for _x in self.c_lines.data:
+            if event.x < _x["x2"] and event.x >= _x["x1"]:
+                self.c_lines.MOVINGHOVERIND = self.c_lines.create_line(_x["x1"]-2, 0, _x["x1"]-2, self.c_lines.lheight, fill="red", width=4)
+                break
         self.c_lines.MOVINGRECT = self.c_lines.create_rectangle(
             event.x-self.c_lines.cevent["xoff"], event.y-self.c_lines.cevent["yoff"],
             event.x-self.c_lines.cevent["xoff"]+(self.c_lines.data[self.c_lines.selected]["x2"]-self.c_lines.data[self.c_lines.selected]["x1"]),
-            event.y-self.c_lines.cevent["yoff"]+self.c_lines.lheight, fill="red")
+            event.y-self.c_lines.cevent["yoff"]+self.c_lines.lheight, fill="", outline="red", width=2)
+        self.c_lines.MOVINGRECTLINE = self.c_lines.create_line(
+            event.x-self.c_lines.cevent["xoff"], event.y-self.c_lines.cevent["yoff"],
+            event.x-self.c_lines.cevent["xoff"]+(self.c_lines.data[self.c_lines.selected]["x2"]-self.c_lines.data[self.c_lines.selected]["x1"]),
+            event.y-self.c_lines.cevent["yoff"]+self.c_lines.lheight, fill="red", width=2)
 
     def bank_length(self,bank):
         if bank == 1: return 226
@@ -622,46 +661,34 @@ class MTELineEditor(Toplevel):
             if event.x < _x["x2"] and event.x >= _x["x1"]:
 
                 _ind = int(_x["index"]) # Get the current index of the matching line
-                print("Index being replaced: ", _ind)
 
-                if (event.x-_x["x1"])/(_x["x2"]-_x["x1"]) < 0.5: # LEFT SWAP
+                _cl = self.c_lines.data[self.c_lines.selected] # CURRENTLY SELECTED LINE
+                self.c_lines.data.pop(self.c_lines.selected) # POP THE OLD LINE
+                self.c_lines.data.insert(_ind, _cl) # INSERTS IT AT THE NEW INDEX (SHIFTING EVERYING TO THE RIGHT)
 
-                    _cl = self.c_lines.data[self.c_lines.selected] # CURRENTLY SELECTED LINE
-                    self.c_lines.data.pop(self.c_lines.selected) # POP THE OLD LINE
-                    self.c_lines.data.insert(_ind, _cl) # INSERTS IT AT THE NEW INDEX (SHIFTING EVERYING TO THE RIGHT)
-
-                    self.p.pp.pprint(self.c_lines.data)
-
-                    _i = 0
-                    _n = 0
-                    for _a in self.c_lines.data: # RESET ALL INDEX VALUES
-                        _a["index"] = _n
-                        _a["x1"] = _i
-                        _a["x2"] = _i+(_a["length"]/self.bank_length(1))*476
-                        _n += 1
-                        _i += (_a["length"]/self.bank_length(1))*476
-
-                    self.p.pp.pprint(self.c_lines.data)
-
-                    print("LEFT SWAP")
-                elif (event.x-_x["x1"])/(_x["x2"]-_x["x1"]) >= 0.5: # RIGHT SWAP
-                    print("RIGHT SWAP")
+                _i = 0
+                _n = 0
+                for _a in self.c_lines.data: # RESET ALL INDEX VALUES
+                    _a["index"] = _n
+                    _a["x1"] = _i
+                    _a["x2"] = _i+(_a["length"]/self.bank_length(1))*self.c_lines.winfo_width()
+                    _n += 1
+                    _i += (_a["length"]/self.bank_length(1))*self.c_lines.winfo_width()
 
                 self.c_lines.selected = _ind
                 break
 
         self.vis_update_everything()
 
-
     def vis_drawrectangle(self, x1, y1, x2, y2, color, outline='',width=0):
         self.c_lines.create_rectangle(x1,y1,x2,y2,fill=color,outline=outline,width=width)
         self.c_lines.update()
 
     def vis_drawgraph(self, bank, bank_length):
-        _basewidth = 472
+        _basewidth = self.c_lines.winfo_width()
         _i = 0
         _n = 0
-        while _n < len(self.c_lines.data)-1:
+        while _n < len(self.c_lines.data):
             _line = self.c_lines.data[_n]
             if _line["bank"] == bank:
                 self.vis_drawrectangle(
@@ -677,9 +704,9 @@ class MTELineEditor(Toplevel):
 
     def vis_update_canvas(self):
         self.c_lines.delete(ALL)
-        self.vis_drawgraph(1, 226)
+        self.vis_drawgraph(1, self.bank_length(1))
         self.vis_drawrectangle(
-            self.clamp(3,472,self.c_lines.data[self.c_lines.selected]["x1"]),
+            self.clamp(3,self.c_lines.winfo_width(),self.c_lines.data[self.c_lines.selected]["x1"]),
             3,
             self.c_lines.data[self.c_lines.selected]["x2"],
             self.c_lines.lheight, "", outline="red", width=2
@@ -690,4 +717,10 @@ class MTELineEditor(Toplevel):
         self.l_curtext.set(self.c_lines.data[self.c_lines.selected]["length"])
         self.s_curtext.set(self.c_lines.data[self.c_lines.selected]["text"])
 
+        for _line in self.c_lines.data:
+            for _data in self.p.vis_lines:
+                if _data["id"] == _line["id"]:
+                    _data["length"] = _line["length"]
+                    _data["text"] = _line["text"]
+        self.p.im_field.update()
         # THIS IS WHERE WE SHOULD UPDATED p.vis_lines BASED ON OUR NEW INDICES
