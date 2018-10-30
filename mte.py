@@ -537,7 +537,8 @@ class MTELineEditor(Toplevel):
         self.l_length = Label(self.f_data,text="Length: ")
         self.l_length.grid(row=1,column=0,sticky=E)
 
-        self.l_curtext = 0
+        self.l_curtext = StringVar()
+        self.l_curtext.set("0")
         self.e_length = Spinbox(self.f_data, from_=0, to=32, width=2, textvariable=self.l_curtext)
         self.e_length.grid(row=1,column=1,sticky=W)
 
@@ -555,61 +556,138 @@ class MTELineEditor(Toplevel):
 
         self.f_data.grid(row=0,column=0,sticky=W)
 
-        self.c_lines = Canvas(self.f_main)
+        self.c_lines = Canvas(self.f_main, width=472, height=32)
         self.c_lines.grid(row=1,column=0)
         self.c_lines.data = []
+        _i = 0
+        _n = 0
+        colors = ["blue","orange","purple","pink","grey","black","yellow","teal","brown"]
+        for _line in self.p.vis_lines:
+            self.c_lines.data.append({
+                "x1": _i,
+                "x2": _i+(_line["length"]/self.bank_length(1))*476,
+                "length": _line["length"],
+                "index": _n,
+                "text": _line["text"],
+                "bank": _line["bank"],
+                "color": colors[_n]
+            })
+            _i += (_line["length"]/self.bank_length(1))*476
+            _n += 1
+        self.c_lines.cevent = { "xoff": 0, "yoff": 0 }
         self.c_lines.selected = 0
+        self.c_lines.mousexdiff = 0
+        self.c_lines.lheight = 32
+        self.c_lines.MOVINGRECT = None
+
 
         self.c_lines.bind("<Button 1>",self.lineclicked)
+        self.c_lines.bind("<B1-Motion>",self.linedrag)
+        self.c_lines.bind("<ButtonRelease-1>",self.linerelease)
 
         self.f_main.grid(row=0,column=0,sticky=W)
 
         self.vis_update_everything()
 
     def lineclicked(self,event):
+        self.c_lines.mousexdiff = 0
         for _x in self.c_lines.data:
             if event.x < _x["x2"] and event.x > _x["x1"]:
                 self.c_lines.selected = _x["index"]
+                self.c_lines.cevent["xoff"] = event.x - _x["x1"]
+                self.c_lines.cevent["yoff"] = event.y
                 self.vis_update_everything()
                 break
 
-    def vis_drawrectangle(self, x1, y1, x2, y2, color):
-        self.c_lines.create_rectangle(x1,y1,x2,y2,fill=color)
+    def linedrag(self,event):
+        self.c_lines.mousexdiff += event.x - self.c_lines.mousexdiff
+        self.c_lines.delete(self.c_lines.MOVINGRECT)
+        self.c_lines.MOVINGRECT = self.c_lines.create_rectangle(
+            event.x-self.c_lines.cevent["xoff"], event.y-self.c_lines.cevent["yoff"],
+            event.x-self.c_lines.cevent["xoff"]+(self.c_lines.data[self.c_lines.selected]["x2"]-self.c_lines.data[self.c_lines.selected]["x1"]),
+            event.y-self.c_lines.cevent["yoff"]+self.c_lines.lheight, fill="red")
+
+    def bank_length(self,bank):
+        if bank == 1: return 226
+
+    def linerelease(self,event):
+
+        self.c_lines.delete(self.c_lines.MOVINGRECT)
+
+        if self.c_lines.mousexdiff <= 4: return "break"
+
+        self.c_lines.mousexdiff = 0
+
+        for _x in self.c_lines.data:
+            if event.x < _x["x2"] and event.x >= _x["x1"]:
+
+                _ind = int(_x["index"]) # Get the current index of the matching line
+                print("Index being replaced: ", _ind)
+
+                if (event.x-_x["x1"])/(_x["x2"]-_x["x1"]) < 0.5: # LEFT SWAP
+
+                    _cl = self.c_lines.data[self.c_lines.selected] # CURRENTLY SELECTED LINE
+                    self.c_lines.data.pop(self.c_lines.selected) # POP THE OLD LINE
+                    self.c_lines.data.insert(_ind, _cl) # INSERTS IT AT THE NEW INDEX (SHIFTING EVERYING TO THE RIGHT)
+
+                    self.p.pp.pprint(self.c_lines.data)
+
+                    _i = 0
+                    _n = 0
+                    for _a in self.c_lines.data: # RESET ALL INDEX VALUES
+                        _a["index"] = _n
+                        _a["x1"] = _i
+                        _a["x2"] = _i+(_a["length"]/self.bank_length(1))*476
+                        _n += 1
+                        _i += (_a["length"]/self.bank_length(1))*476
+
+                    self.p.pp.pprint(self.c_lines.data)
+
+                    print("LEFT SWAP")
+                elif (event.x-_x["x1"])/(_x["x2"]-_x["x1"]) >= 0.5: # RIGHT SWAP
+                    print("RIGHT SWAP")
+
+                self.c_lines.selected = _ind
+                break
+
+        self.vis_update_everything()
+
+
+    def vis_drawrectangle(self, x1, y1, x2, y2, color, outline='',width=0):
+        self.c_lines.create_rectangle(x1,y1,x2,y2,fill=color,outline=outline,width=width)
         self.c_lines.update()
 
     def vis_drawgraph(self, bank, bank_length):
-        colors = ["blue","orange","purple","pink","grey","black","yellow","teal","brown"]
         _basewidth = 472
         _i = 0
         _n = 0
-        for _line in self.p.vis_lines:
+        while _n < len(self.c_lines.data)-1:
+            _line = self.c_lines.data[_n]
             if _line["bank"] == bank:
-                self.c_lines.data.append({
-                    "x1": _i,
-                    "x2": _i+(_line["length"]/bank_length)*_basewidth,
-                    "length": _line["length"],
-                    "index": _n,
-                    "text": _line["text"]
-                })
                 self.vis_drawrectangle(
                     _i, 0,
-                    _i+(_line["length"]/bank_length)*_basewidth, 16,
-                    colors[_n]
+                    _i+(_line["length"]/bank_length)*_basewidth, self.c_lines.lheight,
+                    _line["color"]
                 )
                 _i += (_line["length"]/bank_length)*_basewidth
                 _n += 1
 
+    def clamp(self, minim, maxim, val):
+        return max(minim, min(val, maxim))
+
     def vis_update_canvas(self):
         self.c_lines.delete(ALL)
-        self.vis_drawgraph(1, 226) # [ ] FINISH THIS
+        self.vis_drawgraph(1, 226)
         self.vis_drawrectangle(
-            self.c_lines.data[self.c_lines.selected]["x1"],
-            0,
+            self.clamp(3,472,self.c_lines.data[self.c_lines.selected]["x1"]),
+            3,
             self.c_lines.data[self.c_lines.selected]["x2"],
-            16, "red"
+            self.c_lines.lheight, "", outline="red", width=2
         )
 
     def vis_update_everything(self):
         self.vis_update_canvas()
-        self.l_curtext = self.c_lines.data[self.c_lines.selected]["length"]
+        self.l_curtext.set(self.c_lines.data[self.c_lines.selected]["length"])
         self.s_curtext.set(self.c_lines.data[self.c_lines.selected]["text"])
+
+        # THIS IS WHERE WE SHOULD UPDATED p.vis_lines BASED ON OUR NEW INDICES
