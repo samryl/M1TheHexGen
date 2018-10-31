@@ -145,25 +145,30 @@ class neshex:
 
         return [_x, _y]
 
-    def encodeCoordinates(self, x, y): # NOT DONE DOESNT WORK DONT USE
+    def encodeCoordinates(self, x, y, screen):
         """
         Converts x and y screen coordinates to two signature bytes
         """
 
-        _section = ((y // 32) // 4)
-        _offset = x
+        _section = 32
+        _offset = 0
 
-        offset = int(offset, base=16)
-        section = (int(section, base=16) - 32) - 4*((int(section, base=16) - 32) // 4)
+        _y = (y // 8)
+        _x = (x // 8)
 
-        _x = 0
-        _y = 0
+        if screen == 2:
+            _section += 4 # At this point _section is accurate
 
-        _y = (8*(section)) + ((offset // 32)-1)
+        if _y >= 8: # y // 8 is the amount of lines from the top that Y should be. If it's larger than 8 (1 page), increment section
+            _section += (_y // 8)*8 # WORKING
 
-        _x = offset % 32
+        _extra_lines = _y % 8 # CORRECT
 
-        return [0, 0]
+        _offset += _extra_lines*32 # 32 characters per line, E.X. 3 lines, 96 character offset
+
+        _offset += _x
+
+        return [hex(_section), hex(_offset)]
 
     def readTitleLines(self, file):
         """
@@ -191,7 +196,9 @@ class neshex:
                 "raw" : _title[i][6:],
                 "text" : self.translate_string_to_char(_title[i][6:]).rstrip(),
                 "bank": 1,
+                "writestart": "0x000510",
                 "alignment" : "left",
+                "screen": 1, # TEMPORARY
                 "id": uuid.uuid4().hex[:6].upper()}
             _roffset += _title[i]["length"]
             i += 1
@@ -202,7 +209,6 @@ class neshex:
         i = 0
         _roffset = int("0x000678", base=16)
         for _line in _intro:
-            print(_line)
             _intro[i] = {
                 "location": _roffset,
                 "section" : int(_intro[i][0:2], base=16),
@@ -213,7 +219,9 @@ class neshex:
                 "raw" : _intro[i][6:],
                 "text" : self.translate_string_to_char(_intro[i][6:]),
                 "bank": 1,
+                "writestart": "0x000678",
                 "alignment" : "left",
+                "screen": 2, # TEMPORARY
                 "id": uuid.uuid4().hex[:6].upper()}
             _roffset += _intro[i]["length"]
             i += 1
@@ -226,6 +234,11 @@ class neshex:
         #_lines.extend(_ending)
 
         return _lines
+
+    def pad_value(self, v):
+        while len(v) <= 1:
+            v = "0" + v
+        return v
 
     def get_line_length(self, e):
         """

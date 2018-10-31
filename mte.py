@@ -381,26 +381,29 @@ class MTEApp():
             i = 0
             for _entry in r: # FOR EVERY LINE
 
-                if (((_entry["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
+                #if (((_entry["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
 
-                    _line = _entry["text"]
-                    t.append(_line) # This SHOULD set the index to whatever i is since we're just going forward
+                _line = _entry["text"]
+                t.append(_line) # This SHOULD set the index to whatever i is since we're just going forward
 
-                    if len(_line) < self.vis_lines[i]["length"]:
+                if len(_line) < self.vis_lines[i]["length"]:
 
-                        _dif = self.vis_lines[i]["length"] - len(_line)
+                    _dif = self.vis_lines[i]["length"] - len(_line)
 
-                        # ADD WHITESPACE
-                        if self.vis_lines[i]["alignment"] == 'left':
-                            t[i] = _line + " "*_dif
-                        elif self.vis_lines[i]["alignment"] == 'center':
-                            t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
-                        elif self.vis_lines[i]["alignment"] == 'right':
-                            t[i] = " "*_dif + _line
-                    print(t[i])
-                    t[i] = self.ns.translate_string_to_hex(t[i])
+                    # ADD WHITESPACE
+                    if self.vis_lines[i]["alignment"] == 'left':
+                        t[i] = _line + " "*_dif
+                    elif self.vis_lines[i]["alignment"] == 'center':
+                        t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
+                    elif self.vis_lines[i]["alignment"] == 'right':
+                        t[i] = " "*_dif + _line
 
-                    i += 1
+                r[i]["text"] = self.ns.translate_string_to_hex(t[i])
+                t[i] = self.ns.translate_string_to_hex(t[i])
+
+                i += 1
+
+            self.pp.pprint(r)
 
             # # NOTE: THIS IS WHERE WRITING GETS WONKY
             # Now we need to check the write offset and put strings there. [ ]
@@ -408,9 +411,32 @@ class MTEApp():
             # Each entry in the dict should have a "bank" property [√]
             # Then we will write the banks individually [ ]
 
+            # BANK 1
+            _writing_offset = "0x000510"
+            _write_base = "0x000510"
+            for _line in r:
+                if _line["bank"] == 1:
+                    if _line["writestart"] != _write_base: # if new writespace
+                        _writing_offset = _line["writestart"]
+                        _write_base = _line["writestart"]
+
+                    self.ns.writeHexString(f, _writing_offset,
+                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[0][2:]))) + # Section
+                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[1][2:]))) + # Offset
+                        str(self.ns.pad_value(hex(_line["length"])[2:])))                # Length
+                    _writing_offset = hex(int(_writing_offset, base=16) + 3)
+                    self.ns.writeHexString(f, _writing_offset, _line["text"])
+                    _writing_offset = hex(int(_writing_offset, base=16) + _line["length"])
+
+                    print(_writing_offset)
+                    print(t[0])
+                    print(_line["text"])
+                    print("--")
+
+
             if self.s_editing.get() == 'Title':
-                self.ns.writeHexString(f, "0x000513", t[0])
-                self.ns.writeHexString(f, "0x00052B", t[1])
+                self.ns.writeHexString(f, "0x000513", t[0]) # WRITE TEXT
+                self.ns.writeHexString(f, "0x00052B", t[1]) # WRITE TEXT
             elif self.s_editing.get() == 'Intro':
                 self.ns.writeHexString(f, "0x00067B", t[2])
                 self.ns.writeHexString(f, "0x00068D", t[3])
@@ -484,17 +510,17 @@ class MTELineEditor(Toplevel):
     ##  - vis_lines
     ##  - vis_curline
     ##
-    ## [ ] It will need to edit these as well
+    ## [√] It will need to edit these as well
     ##
-    ## [ ] The code will draw a series of rectangles on a canvas object, keeping track of the X coordinate
+    ## [√] The code will draw a series of rectangles on a canvas object, keeping track of the X coordinate
     ## of each rectangle's beginning and end.
     ##
-    ## [ ] Right mouse click over the canvas will trigger code, which says basically:
+    ## [√] Left mouse click over the canvas will trigger code, which says basically:
     ## if(mouse.x within range of a beginning or end coord){
     ##     begin_drag()
     ## }
     ##
-    ## [ ] Once the drag is complete, the proper vis_lines entries will be adjusted to the proper values.
+    ## [√] Once the drag is complete, the proper vis_lines entries will be adjusted to the proper values.
     ##
     ## [ ] There will also be a button which launches yet another dialog asking the length of the new string
     ## to be added. It will need to automatically guess the value based on space remaining (capped at 20).
@@ -547,9 +573,13 @@ class MTELineEditor(Toplevel):
 
         self.f_coordsentry = Frame(self.f_data)
 
-        self.e_coordsX = Spinbox(self.f_coordsentry, from_=0, to=32, width=2)
+        self.s_coordsX = StringVar()
+        self.s_coordsX.set("0")
+        self.s_coordsY = StringVar()
+        self.s_coordsY.set("0")
+        self.e_coordsX = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsX)
         self.e_coordsX.grid(row=0,column=0)
-        self.e_coordsY = Spinbox(self.f_coordsentry, from_=0, to=32, width=2)
+        self.e_coordsY = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsY)
         self.e_coordsY.grid(row=0,column=1)
 
         self.f_coordsentry.grid(row=2,column=1,sticky=W)
@@ -566,6 +596,7 @@ class MTELineEditor(Toplevel):
         colors = ["blue","orange","purple","pink","grey","black","yellow","teal","brown"]
         self.bank_lengths = [0,0,0]
         self.current_bank = 1
+
         for _line in self.p.vis_lines:
             self.c_lines.data.append({
                 "x1": _i,
@@ -575,11 +606,14 @@ class MTELineEditor(Toplevel):
                 "text": _line["text"],
                 "bank": _line["bank"],
                 "color": colors[_n],
-                "id": _line["id"]
+                "id": _line["id"],
+                "xcoord": _line["x"],
+                "ycoord": _line["y"]
             })
             self.bank_lengths[_line["bank"]-1] += 1
             _i += (_line["length"]/self.bank_length(1))*_canvas_width
             _n += 1
+
         self.c_lines.cevent = { "xoff": 0, "yoff": 0 }
         self.c_lines.selected = 0
         self.c_lines.mousexdiff = 0
@@ -595,12 +629,20 @@ class MTELineEditor(Toplevel):
         self.c_lines.bind("<Right>",self.vis_rightarrow)
 
         self.s_curtext.trace("w", self.vis_textchanged)
+        self.s_coordsX.trace("w", self.vis_coordchangedX)
+        self.s_coordsY.trace("w", self.vis_coordchangedY)
 
         self.f_main.grid(row=0,column=0,sticky=W)
 
         self.c_lines.focus_set()
 
         self.vis_update_everything()
+
+    def vis_coordchangedX(self, *args):
+        self.c_lines.data[self.c_lines.selected]["xcoord"] = int(self.s_coordsX.get())
+
+    def vis_coordchangedY(self, *args):
+        self.c_lines.data[self.c_lines.selected]["ycoord"] = int(self.s_coordsY.get())
 
     def vis_textchanged(self, *args):
         self.c_lines.data[self.c_lines.selected]["text"] = self.s_curtext.get()
@@ -716,11 +758,16 @@ class MTELineEditor(Toplevel):
         self.vis_update_canvas()
         self.l_curtext.set(self.c_lines.data[self.c_lines.selected]["length"])
         self.s_curtext.set(self.c_lines.data[self.c_lines.selected]["text"])
+        self.s_coordsX.set(self.c_lines.data[self.c_lines.selected]["xcoord"])
+        self.s_coordsY.set(self.c_lines.data[self.c_lines.selected]["ycoord"])
 
         for _line in self.c_lines.data:
             for _data in self.p.vis_lines:
                 if _data["id"] == _line["id"]:
+                    #print(_line["text"],_line["xcoord"],_line["ycoord"], _data["y"])
                     _data["length"] = _line["length"]
                     _data["text"] = _line["text"]
+                    _data["x"] = _line["xcoord"]
+                    _data["y"] = _line["ycoord"]
+
         self.p.im_field.update()
-        # THIS IS WHERE WE SHOULD UPDATED p.vis_lines BASED ON OUR NEW INDICES
