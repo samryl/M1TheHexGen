@@ -421,16 +421,20 @@ class MTEApp():
                         _write_base = _line["writestart"]
 
                     self.ns.writeHexString(f, _writing_offset,
-                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[0][2:]))) + # Section
-                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[1][2:]))) + # Offset
-                        str(self.ns.pad_value(hex(_line["length"])[2:])))                # Length
-                    _writing_offset = hex(int(_writing_offset, base=16) + 3)
+                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[0][2:]))))
+                    _writing_offset = hex(int(_writing_offset, base=16) + 1)
+
+                    self.ns.writeHexString(f, _writing_offset,
+                        str(self.ns.pad_value(str(self.ns.encodeCoordinates(_line["x"], _line["y"], _line["screen"])[1][2:]))))
+                    _writing_offset = hex(int(_writing_offset, base=16) + 1)
+
+                    self.ns.writeHexString(f, _writing_offset,
+                        str(self.ns.pad_value(hex(_line["length"])[2:])))
+                    _writing_offset = hex(int(_writing_offset, base=16) + 1)
+
                     self.ns.writeHexString(f, _writing_offset, _line["text"])
                     _writing_offset = hex(int(_writing_offset, base=16) + _line["length"])
 
-                    print(_writing_offset)
-                    print(t[0])
-                    print(_line["text"])
                     print("--")
 
 

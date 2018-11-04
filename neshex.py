@@ -150,23 +150,47 @@ class neshex:
         Converts x and y screen coordinates to two signature bytes
         """
 
-        _section = 32
+        # WHAT IS Y?
+        # Y is the product of the section and 8 plus the diviso of the offset and 32 minus 1
+        # Section and offset have been modified by this point
+        # section = (section - 32) - 4*((section - 32) // 4)
+        # So, for the first line (34) section = (34-32) - 4*((34-32) // 4) = 2 - 4*(2 // 4) = 2 - 0 = 2
+        # offset = offset
+        # So, for the first line (39), offset = 39
+        #
+        # So, for the first line (34) y = 8*2 + 39 // 32 - 1 = 16 + 1-1 = 16
+        # x = 7 at this point.
+        #
+        # Now we need to do this backwards
+        #
+        # offset // 32 will be any extra over a diviso of 8, so:
+        # 1. _section = (y // 8) + ((y % 8)+1)
+        # 2. _section = _section + 31
+        # TEST: original = 34
+        #  1a - section = 16
+        #  1b - y = 2 + ((0)+1) = 3
+
+        print(x, y)
+
+        _section = 24
         _offset = 0
 
-        _y = (y // 8)
-        _x = (x // 8)
+        _y = y
+        _x = x
 
         if screen == 2:
-            _section += 4 # At this point _section is accurate
+            _section += 4
 
         if _y >= 8: # y // 8 is the amount of lines from the top that Y should be. If it's larger than 8 (1 page), increment section
-            _section += (_y // 8)*8 # WORKING
+            _section += (_y // 8)*8
 
-        _extra_lines = _y % 8 # CORRECT
+        _extra_lines = _y % 8
 
         _offset += _extra_lines*32 # 32 characters per line, E.X. 3 lines, 96 character offset
 
         _offset += _x
+
+        print(hex(_section), hex(_offset))
 
         return [hex(_section), hex(_offset)]
 
