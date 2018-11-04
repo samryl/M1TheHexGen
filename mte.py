@@ -7,13 +7,21 @@
 ## WE NEED TO MAKE THE GUI SPACE EDITOR AND SEPARATE EVERYTHING INTO BANKS [ ]
 
 
-import sys, itertools, math, re, os, pprint, random
+import sys, itertools, math, re, os, pprint, random, copy
 from os import listdir
 from os.path import isfile, join
 from collections import OrderedDict
 from tkinter import *
 from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
+
+class ColorBlock():
+    background1 = '#212121'
+    background1hov = '#3d3d3d'
+    background2 = '#303030'
+    background2hov = '#4f4f4f'
+    text = '#dbdbdb'
+    texthov = '#f7f7f7'
 
 class MTEApp():
 
@@ -30,10 +38,10 @@ class MTEApp():
         self.root = Tk()
         self.root.title("Metroid: The HEX Gen")
         self.root.resizable(False,False)
-        self.root.geometry('1036x768')
-        self.root.configure(padx=12, pady=12)
+        self.root.geometry('1018x700')
+        self.root.configure(padx=12, pady=12, bg=ColorBlock.background1)
 
-        self.f_visual = Frame(self.root)
+        self.f_visual = Frame(self.root, bg=ColorBlock.background1)
 
         self.img_letters = self.load_images()
 
@@ -51,18 +59,19 @@ class MTEApp():
 
         self._initKeybinds()
 
-        self.f_tools = Frame(self.f_visual)
+        self.f_tools = Frame(self.f_visual, bg=ColorBlock.background1)
 
         self.s_editing = StringVar(self.f_tools)
         texts = {'Intro', 'Title', 'Ending'}
         self.s_editing.set('Title')
 
         self.l_char = OptionMenu(self.f_tools, self.s_editing, *sorted(texts), command=self.vis_changepage)
+        self.l_char.config(bg=ColorBlock.background1, fg=ColorBlock.text, activebackground=ColorBlock.background1hov, activeforeground=ColorBlock.texthov)
         self.l_char.grid(row=1,column=1, pady=4)
 
-        self.f_align = Frame(self.f_tools)
+        self.f_align = Frame(self.f_tools, bg=ColorBlock.background1)
 
-        self.l_alignment = Label(self.f_align, text="Alignment")
+        self.l_alignment = Label(self.f_align, text="Alignment", bg=ColorBlock.background1, fg=ColorBlock.text, relief='flat')
         self.l_alignment.grid(row=1,column=1)
 
         self.f_alignb = Frame(self.f_align)
@@ -82,7 +91,7 @@ class MTEApp():
 
         self.f_align.grid(row=2,column=1,sticky=NW, pady=4)
 
-        self.f_file = Frame(self.f_tools)
+        self.f_file = Frame(self.f_tools, bg=ColorBlock.background1)
 
         self.b_getfile = Button(self.f_file, text="...", command=self.getROM)
         self.b_getfile.grid(row=0,column=0, padx=2)
@@ -91,14 +100,12 @@ class MTEApp():
         self.e_filepath.config(state='disabled')
         self.e_filepath.grid(row=0,column=1)
 
-        self.f_patchbuttons = Frame(self.f_file)
-        self.b_patchscreen = Button(self.f_patchbuttons, text="Patch Screen", command=self.patchROMScreen)
-        self.b_patchscreen.grid(row=1,column=0)
+        self.f_patchbuttons = Frame(self.f_file, bg=ColorBlock.background1)
         self.b_patchall = Button(self.f_patchbuttons, text="Patch All", command=self.patchROMAll)
         self.b_patchall.grid(row=1,column=1, padx=4, pady=4)
         self.f_patchbuttons.grid(row=1,column=1)
 
-        self.f_utils = Frame(self.f_tools)
+        self.f_utils = Frame(self.f_tools, bg=ColorBlock.background1)
         self.b_openlineeditor = Button(self.f_utils, text="Line Editor", command=self.openLineEditor)
         self.b_openlineeditor.grid(row=0,column=0)
         self.f_utils.grid(row=5,column=1)
@@ -375,27 +382,25 @@ class MTEApp():
 
             f = open(self.ROM, "r+b")
 
-            r = self.vis_lines.copy()
+            r = copy.deepcopy(self.vis_lines)
             t = []
 
             i = 0
             for _entry in r: # FOR EVERY LINE
 
-                #if (((_entry["section"]-32)) // 4)+1 == self.vis_curpage: # if it's on the current screen
-
                 _line = _entry["text"]
                 t.append(_line) # This SHOULD set the index to whatever i is since we're just going forward
 
-                if len(_line) < self.vis_lines[i]["length"]:
+                if len(_line) < r[i]["length"]:
 
-                    _dif = self.vis_lines[i]["length"] - len(_line)
+                    _dif = r[i]["length"] - len(_line)
 
                     # ADD WHITESPACE
-                    if self.vis_lines[i]["alignment"] == 'left':
+                    if r[i]["alignment"] == 'left':
                         t[i] = _line + " "*_dif
-                    elif self.vis_lines[i]["alignment"] == 'center':
+                    elif r[i]["alignment"] == 'center':
                         t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
-                    elif self.vis_lines[i]["alignment"] == 'right':
+                    elif r[i]["alignment"] == 'right':
                         t[i] = " "*_dif + _line
 
                 r[i]["text"] = self.ns.translate_string_to_hex(t[i])
@@ -403,13 +408,7 @@ class MTEApp():
 
                 i += 1
 
-            self.pp.pprint(r)
-
-            # # NOTE: THIS IS WHERE WRITING GETS WONKY
-            # Now we need to check the write offset and put strings there. [ ]
-            # There are 3 banks where we can put text, 2 for the intro and 1 for the ending
-            # Each entry in the dict should have a "bank" property [√]
-            # Then we will write the banks individually [ ]
+            self.pp.pprint(self.vis_lines)
 
             # BANK 1
             _writing_offset = "0x000510"
@@ -435,76 +434,10 @@ class MTEApp():
                     self.ns.writeHexString(f, _writing_offset, _line["text"])
                     _writing_offset = hex(int(_writing_offset, base=16) + _line["length"])
 
-                    print("--")
-
-
-            if self.s_editing.get() == 'Title':
-                self.ns.writeHexString(f, "0x000513", t[0]) # WRITE TEXT
-                self.ns.writeHexString(f, "0x00052B", t[1]) # WRITE TEXT
-            elif self.s_editing.get() == 'Intro':
-                self.ns.writeHexString(f, "0x00067B", t[2])
-                self.ns.writeHexString(f, "0x00068D", t[3])
-                self.ns.writeHexString(f, "0x0006AC", t[4])
-                self.ns.writeHexString(f, "0x0006C9", t[5])
-                self.ns.writeHexString(f, "0x0006E6", t[6])
-                self.ns.writeHexString(f, "0x000703", t[7])
-                self.ns.writeHexString(f, "0x00071B", t[8])
-            elif self.s_editing.get() == 'Ending':
-                #writeHexString(f, "0x0021D5", t[0]) HEADER
-                #writeHexString(f, "0x0021E0", t[0]) BODY
-                #writeHexString(f, "0x0021FE", t[1])
-                #writeHexString(f, "0x002218", t[2])
-                #writeHexString(f, "0x002222", t[3])
-                #writeHexString(f, "0x00223D", t[4])
-                #writeHexString(f, "0x002253", t[5])
-                #writeHexString(f, "0x00226E", t[6])
-                pass
-
             f.close()
 
     def openLineEditor(self):
         self.w_lineeditor = MTELineEditor(self)
-
-    def patchROMScreen(self): # DEFUNCT
-
-        if self.ROM != False:
-
-            f = open(self.ROM, "r+b")
-            t = self.vis_lines.copy()
-
-            i = 0 ## FIX THIS
-            for _line in t:
-                if len(_line) < self.vis_lines[i]["length"]:
-                    _dif = self.vis_lines[i]["length"] - len(_line)
-                    if self.vis_lines[i]["alignment"] == 'left':
-                        t[i] = _line + " "*_dif
-                    elif self.vis_lines[i]["alignment"] == 'center':
-                        t[i] = " "*math.floor(_dif/2) + _line + " "*math.ceil(_dif/2)
-                    elif self.vis_lines[i]["alignment"] == 'right':
-                        t[i] = " "*_dif + _line
-                t[i] = self.ns.translate_string_to_hex(t[i])
-                i += 1
-
-            self.ns.writeHexString(f, "0x000513", t[0])
-            self.ns.writeHexString(f, "0x00052B", t[1])
-            self.ns.writeHexString(f, "0x00067B", t[2])
-            self.ns.writeHexString(f, "0x00068D", t[3])
-            self.ns.writeHexString(f, "0x0006AC", t[4])
-            self.ns.writeHexString(f, "0x0006C9", t[5])
-            self.ns.writeHexString(f, "0x0006E6", t[6])
-            self.ns.writeHexString(f, "0x000703", t[7])
-            self.ns.writeHexString(f, "0x00071B", t[8])
-
-            #writeHexString(f, "0x0021D5", t[0]) HEADER
-            #writeHexString(f, "0x0021E0", t[0]) BODY
-            #writeHexString(f, "0x0021FE", t[1])
-            #writeHexString(f, "0x002218", t[2])
-            #writeHexString(f, "0x002222", t[3])
-            #writeHexString(f, "0x00223D", t[4])
-            #writeHexString(f, "0x002253", t[5])
-            #writeHexString(f, "0x00226E", t[6])
-
-            f.close()
 
 class MTELineEditor(Toplevel):
 
@@ -531,7 +464,7 @@ class MTELineEditor(Toplevel):
     ##
     ## [ ] There will need to be a tab for each bank of text.
     ##
-    ## [ ] There will need to also be spinbox editors for length and content of the lines
+    ## [√] There will need to also be spinbox editors for length and content of the lines
     ##
     ## [ ] There will need to be a raw hex editor containing all the data from the bank
     ##
@@ -548,7 +481,7 @@ class MTELineEditor(Toplevel):
         self.title('MTE Line Editor')
 
         self.resizable(False,False)
-        self.geometry('1000x240')
+        self.geometry('804x240')
 
         self.p = master
 
@@ -571,6 +504,7 @@ class MTELineEditor(Toplevel):
         self.l_curtext.set("0")
         self.e_length = Spinbox(self.f_data, from_=0, to=32, width=2, textvariable=self.l_curtext)
         self.e_length.grid(row=1,column=1,sticky=W)
+        self.e_length['state'] = DISABLED
 
         self.l_coords = Label(self.f_data,text="X/Y: ")
         self.l_coords.grid(row=2,column=0,sticky=E)
@@ -627,8 +561,8 @@ class MTELineEditor(Toplevel):
         self.c_lines.MOVINGHOVERIND = None
 
         self.c_lines.bind("<Button 1>",self.lineclicked)
-        self.c_lines.bind("<B1-Motion>",self.linedrag)
-        self.c_lines.bind("<ButtonRelease-1>",self.linerelease)
+        #self.c_lines.bind("<B1-Motion>",self.linedrag)
+        #self.c_lines.bind("<ButtonRelease-1>",self.linerelease)
         self.c_lines.bind("<Left>",self.vis_leftarrow)
         self.c_lines.bind("<Right>",self.vis_rightarrow)
 
@@ -638,7 +572,7 @@ class MTELineEditor(Toplevel):
 
         self.f_main.grid(row=0,column=0,sticky=W)
 
-        self.c_lines.focus_set()
+        #self.c_lines.focus_set()
 
         self.vis_update_everything()
 
@@ -732,6 +666,9 @@ class MTELineEditor(Toplevel):
 
     def vis_drawgraph(self, bank, bank_length):
         _basewidth = self.c_lines.winfo_width()
+        if _basewidth <= 1:
+            _basewidth = 804
+
         _i = 0
         _n = 0
         while _n < len(self.c_lines.data):
