@@ -45,7 +45,7 @@ class MTEApp():
 
         self.img_letters = self.load_images()
 
-        self.im_field = Canvas(self.f_visual, width=768, height=672)
+        self.im_field = Canvas(self.f_visual, width=768, height=672, bg=ColorBlock.background1)
         self.im_field.grid(row=1,column=1)
         self.im_field.focus_set()
 
@@ -62,12 +62,14 @@ class MTEApp():
         self.f_tools = Frame(self.f_visual, bg=ColorBlock.background1)
 
         self.s_editing = StringVar(self.f_tools)
-        texts = {'Intro', 'Title', 'Ending'}
+        texts = {'Intro', 'Title'} #, 'Ending'}
         self.s_editing.set('Title')
 
         self.l_char = OptionMenu(self.f_tools, self.s_editing, *sorted(texts), command=self.vis_changepage)
         self.l_char.config(bg=ColorBlock.background1, fg=ColorBlock.text, activebackground=ColorBlock.background1hov, activeforeground=ColorBlock.texthov)
+        self.l_char["highlightthickness"] = 0
         self.l_char.grid(row=1,column=1, pady=4)
+        self.l_char["menu"].config(bg=ColorBlock.background1, fg=ColorBlock.text, activebackground=ColorBlock.background1hov, activeforeground=ColorBlock.texthov)
 
         self.f_align = Frame(self.f_tools, bg=ColorBlock.background1)
 
@@ -80,11 +82,11 @@ class MTEApp():
         self.im_cj = PhotoImage(master=self.f_alignb, file=self.dir_path + "/im/ico/centerj.png")
         self.im_rj = PhotoImage(master=self.f_alignb, file=self.dir_path + "/im/ico/rightj.png")
 
-        self.b_leftj = Button(self.f_alignb, image=self.im_lj, command= lambda: self.vis_changealignment("left"))
+        self.b_leftj = Button(self.f_alignb, image=self.im_lj, command= lambda: self.vis_changealignment("left"), bg=ColorBlock.background1, fg=ColorBlock.text)
         self.b_leftj.grid(row=1,column=0)
-        self.b_centerj = Button(self.f_alignb, image=self.im_cj, command= lambda: self.vis_changealignment("center"))
+        self.b_centerj = Button(self.f_alignb, image=self.im_cj, command= lambda: self.vis_changealignment("center"), bg=ColorBlock.background1, fg=ColorBlock.text)
         self.b_centerj.grid(row=1,column=1)
-        self.b_rightj = Button(self.f_alignb, image=self.im_rj, command= lambda: self.vis_changealignment("right"))
+        self.b_rightj = Button(self.f_alignb, image=self.im_rj, command= lambda: self.vis_changealignment("right"), bg=ColorBlock.background1, fg=ColorBlock.text)
         self.b_rightj.grid(row=1,column=2)
 
         self.f_alignb.grid(row=3,column=1,sticky=NW)
@@ -93,22 +95,19 @@ class MTEApp():
 
         self.f_file = Frame(self.f_tools, bg=ColorBlock.background1)
 
-        self.b_getfile = Button(self.f_file, text="...", command=self.getROM)
+        self.b_getfile = Button(self.f_file, text="...", command=self.getROM, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.b_getfile.grid(row=0,column=0, padx=2)
 
-        self.e_filepath = Text(self.f_file, pady=5, width=22, wrap=NONE, height=1)
+        self.e_filepath = Text(self.f_file, pady=5, width=22, wrap=NONE, height=1, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.e_filepath.config(state='disabled')
         self.e_filepath.grid(row=0,column=1)
 
-        self.f_patchbuttons = Frame(self.f_file, bg=ColorBlock.background1)
-        self.b_patchall = Button(self.f_patchbuttons, text="Patch All", command=self.patchROMAll)
-        self.b_patchall.grid(row=1,column=1, padx=4, pady=4)
-        self.f_patchbuttons.grid(row=1,column=1)
-
-        self.f_utils = Frame(self.f_tools, bg=ColorBlock.background1)
-        self.b_openlineeditor = Button(self.f_utils, text="Line Editor", command=self.openLineEditor)
+        self.f_utils = Frame(self.f_file, bg=ColorBlock.background1)
+        self.b_patchall = Button(self.f_utils, text="Patch All", command=self.patchROMAll, bg=ColorBlock.background1, fg=ColorBlock.text)
+        self.b_patchall.grid(row=0,column=1, padx=4, pady=4)
+        self.b_openlineeditor = Button(self.f_utils, text="Line Editor", command=self.openLineEditor, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.b_openlineeditor.grid(row=0,column=0)
-        self.f_utils.grid(row=5,column=1)
+        self.f_utils.grid(row=1,column=1)
 
         self.f_file.grid(row=4,column=1, pady=4)
 
@@ -265,7 +264,7 @@ class MTEApp():
         self.vis_update_text()
 
     def vis_rightarrow(self, evt):
-        if not self.vis_curindex > self.vis_lines[self.vis_curline]["length"]-1:
+        if not self.vis_curindex > len(self.vis_lines[self.vis_curline]["text"])-1:
             self.vis_curindex += 1
         self.vis_update_text()
 
@@ -443,35 +442,12 @@ class MTELineEditor(Toplevel):
 
     #### PRESPLAIN
     ##
-    ## [√] This class will need access to the following objects from the parent class:
-    ##  - vis_lines
-    ##  - vis_curline
-    ##
-    ## [√] It will need to edit these as well
-    ##
-    ## [√] The code will draw a series of rectangles on a canvas object, keeping track of the X coordinate
-    ## of each rectangle's beginning and end.
-    ##
-    ## [√] Left mouse click over the canvas will trigger code, which says basically:
-    ## if(mouse.x within range of a beginning or end coord){
-    ##     begin_drag()
-    ## }
-    ##
-    ## [√] Once the drag is complete, the proper vis_lines entries will be adjusted to the proper values.
-    ##
     ## [ ] There will also be a button which launches yet another dialog asking the length of the new string
     ## to be added. It will need to automatically guess the value based on space remaining (capped at 20).
     ##
     ## [ ] There will need to be a tab for each bank of text.
     ##
-    ## [√] There will need to also be spinbox editors for length and content of the lines
-    ##
     ## [ ] There will need to be a raw hex editor containing all the data from the bank
-    ##
-    ## [ ] There will need to be an editor for the X and Y coordinates which automatically updates the
-    ## section and offset values
-    ##
-    ## [√] My tea is cold
     ##
 
     def __init__(self, master):
@@ -481,43 +457,43 @@ class MTELineEditor(Toplevel):
         self.title('MTE Line Editor')
 
         self.resizable(False,False)
-        self.geometry('804x240')
+        self.geometry('812x140')
 
         self.p = master
 
-        self.f_main = Frame(self,padx=4,pady=4)
+        self.f_main = Frame(self,padx=4,pady=4, bg=ColorBlock.background1)
 
-        self.f_data = Frame(self.f_main)
+        self.f_data = Frame(self.f_main, bg=ColorBlock.background1)
 
-        self.l_plaintext = Label(self.f_data,text="Text: ")
+        self.l_plaintext = Label(self.f_data,text="Text: ", bg=ColorBlock.background1, fg=ColorBlock.text)
         self.l_plaintext.grid(row=0,column=0,sticky=E)
 
         self.s_curtext = StringVar()
         self.s_curtext.set("")
-        self.e_plaintext = Entry(self.f_data, textvariable=self.s_curtext, width=60)
+        self.e_plaintext = Entry(self.f_data, textvariable=self.s_curtext, width=60, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.e_plaintext.grid(row=0,column=1,sticky=W)
 
-        self.l_length = Label(self.f_data,text="Length: ")
+        self.l_length = Label(self.f_data,text="Length: ", bg=ColorBlock.background1, fg=ColorBlock.text)
         self.l_length.grid(row=1,column=0,sticky=E)
 
         self.l_curtext = StringVar()
         self.l_curtext.set("0")
-        self.e_length = Spinbox(self.f_data, from_=0, to=32, width=2, textvariable=self.l_curtext)
+        self.e_length = Spinbox(self.f_data, from_=0, to=32, width=2, textvariable=self.l_curtext, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.e_length.grid(row=1,column=1,sticky=W)
         self.e_length['state'] = DISABLED
 
-        self.l_coords = Label(self.f_data,text="X/Y: ")
+        self.l_coords = Label(self.f_data,text="X/Y: ", bg=ColorBlock.background1, fg=ColorBlock.text)
         self.l_coords.grid(row=2,column=0,sticky=E)
 
-        self.f_coordsentry = Frame(self.f_data)
+        self.f_coordsentry = Frame(self.f_data, bg=ColorBlock.background1)
 
         self.s_coordsX = StringVar()
         self.s_coordsX.set("0")
         self.s_coordsY = StringVar()
         self.s_coordsY.set("0")
-        self.e_coordsX = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsX)
+        self.e_coordsX = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsX, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.e_coordsX.grid(row=0,column=0)
-        self.e_coordsY = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsY)
+        self.e_coordsY = Spinbox(self.f_coordsentry, from_=0, to=32, width=2, textvariable=self.s_coordsY, bg=ColorBlock.background1, fg=ColorBlock.text)
         self.e_coordsY.grid(row=0,column=1)
 
         self.f_coordsentry.grid(row=2,column=1,sticky=W)
@@ -526,7 +502,7 @@ class MTELineEditor(Toplevel):
 
         _canvas_width = 800
         _canvas_height = 64
-        self.c_lines = Canvas(self.f_main, width=_canvas_width, height=_canvas_height)
+        self.c_lines = Canvas(self.f_main, width=_canvas_width, height=_canvas_height, bg=ColorBlock.background1, bd=0)
         self.c_lines.grid(row=1,column=0)
         self.c_lines.data = []
         _i = 0
@@ -572,18 +548,21 @@ class MTELineEditor(Toplevel):
 
         self.f_main.grid(row=0,column=0,sticky=W)
 
-        #self.c_lines.focus_set()
+        self.c_lines.focus_set()
 
         self.vis_update_everything()
 
     def vis_coordchangedX(self, *args):
         self.c_lines.data[self.c_lines.selected]["xcoord"] = int(self.s_coordsX.get())
+        self.vis_update_everything()
 
     def vis_coordchangedY(self, *args):
         self.c_lines.data[self.c_lines.selected]["ycoord"] = int(self.s_coordsY.get())
+        self.vis_update_everything()
 
     def vis_textchanged(self, *args):
-        self.c_lines.data[self.c_lines.selected]["text"] = self.s_curtext.get()
+        self.c_lines.data[self.c_lines.selected]["text"] = self.s_curtext.get()[:self.c_lines.data[self.c_lines.selected]["length"]]
+        self.vis_update_everything()
 
     def vis_rightarrow(self,event):
         self.c_lines.selected += 1
@@ -710,5 +689,3 @@ class MTELineEditor(Toplevel):
                     _data["text"] = _line["text"]
                     _data["x"] = _line["xcoord"]
                     _data["y"] = _line["ycoord"]
-
-        self.p.im_field.update()
